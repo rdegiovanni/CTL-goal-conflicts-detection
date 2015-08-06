@@ -1,6 +1,15 @@
 module Dctl where
 
-import Set	
+
+
+import qualified Data.Set as S
+import Data.Set (Set)
+import qualified SetAux as S
+
+import Prelude hiding (break, negate)
+
+import Hugs.Observe
+import Debug.Trace
 
 -- dCTL Formulas 
 data Formula = 	And Formula Formula
@@ -18,12 +27,69 @@ data Formula = 	And Formula Formula
 			|	Norm
 			|	T
 			|	F
-			deriving (Eq, Show)
+			deriving (Eq,Ord)
 
 data PFormula 	= 	U Formula Formula
 				|	W Formula Formula
 				|	X Formula
-				deriving (Eq, Show)
+				deriving (Eq,Ord)
+
+
+instance Show Formula where
+	show (And p q) 	=	show p ++ " && " ++ show q
+	show (Or p q) 	=	show p ++ " || " ++ show q 
+	show (If p q)	=	show p ++ " -> " ++ show q 
+	show (Iff p q) 	=	show p ++ " <-> " ++ show q
+	show (Not p)		=	"!" ++ show p
+	show (A f) 		= 	"A" ++ show f
+	show (O f) 		= 	"O" ++ show f
+	show (P f) 		= 	"P" ++ show f
+	show (E f) 		= 	"E" ++ show f
+	show (Prop s) 	= 	s	
+	show Norm		= 	"n"
+	show T 			= 	"true"
+	show F 			= 	"false"
+
+instance Show PFormula where
+	show (U p q) 	=	"(" ++ show p ++ " U " ++ show q ++ ")"
+	show (W p q) 	=	"(" ++ show p ++ " W " ++ show q ++ ")"
+	show (X p) 	=	"(" ++ "X" ++ show p ++ ")" 
+
+
+isAX :: Formula -> Bool
+isAX (A(X _)) = True
+isAX _ = False
+
+isEX :: Formula -> Bool
+isEX (E(X _)) = True
+isEX _ = False
+
+isEU :: Formula -> Bool
+isEU (E(U _ _)) = True
+isEU _ = False
+
+isAU :: Formula -> Bool
+isAU (A(U _ _)) = True
+isAU _ = False
+
+isProp :: Formula -> Bool
+isProp (Prop _) = True
+isProp _ = False
+
+isNegLiteral :: Formula -> Bool
+isNegLiteral (Not f) = isProp f
+isNegLiteral _ = False
+
+isLiteral :: Formula -> Bool
+isLiteral f = (isProp f) || (isNegLiteral f)
+
+chopEX :: Formula -> Formula
+chopEX (E (X f)) = f
+chopEX f = f
+
+chopAX :: Formula -> Formula
+chopAX (A (X f)) = f
+chopAX f = f 
 
 
 
@@ -40,6 +106,86 @@ elementary _ = False
 --elementary P (X _) = True
 --elementary O (X _) = True
 
-deco :: Formula -> Set (Set Formula)
-deco _ = 
+
+break :: Formula -> Set (Set Formula)
+break f = S.fromList (map S.fromList (break_rule f))
+
+break_rule :: Formula -> [[Formula]]
+-- Propositional
+break_rule (Or p q)		=	[[p],[q]]
+break_rule (And p q)	= 	[[p,q]]
+break_rule (If p q)		=	[[negate p],[q]]
+break_rule (Iff p q)	=	[[negate p, negate q],[p,q]]
+-- All
+break_rule (A (U p q))	=	[[q],[p, A (X (A (U p q)))]]
+break_rule (A (W p q))	=	[[q],[p, A (X (A (W p q)))]]
+-- Exists
+break_rule (E (U p q))	=	[[q],[p, E (X (E (U p q)))]]
+break_rule (E (W p q))	=	[[q],[p, E (X (E (W p q)))]]
+-- Obligation
+break_rule (O (U p q))	=	[[Norm, q],[Norm, p, O (X (O (U p q)))]]
+break_rule (O (W p q))	=	[[Norm, q],[Norm, p, O (X (O (W p q)))]]
+break_rule (O (X p))	=	[[A(X (Or (Not Norm) p))]]
+-- Permission
+break_rule (P (U p q))	=	[[Norm, q],[Norm, p, P (X (P (U p q)))]]
+break_rule (P (W p q))	=	[[Norm, q],[Norm, p, P (X (P (W p q)))]]
+break_rule (P (X p))	=	[[E(X (And Norm p))]]
+
+negate :: Formula -> Formula
+-- Propositional
+negate (Or p q)		=	And (negate p) (negate q)
+negate (And p q)	= 	Or (negate p) (negate q)
+negate (If p q)		=	And p (negate q)
+negate (Iff p q)	=	Or (And (negate p) q) (And p (negate q))
+negate (Prop p)		=	Not (Prop p)
+negate Norm			=	Not Norm
+negate T 			=	F
+negate F 			=	T
+-- All
+negate (A (X p))	=	E (X (negate p))
+negate (A (U p q))	=	E (W (negate q) (And (negate p) (negate q)))
+negate (A (W p q))	=	E (U (negate q) (And (negate p) (negate q)))
+-- Exists
+negate (E (X p))	=	A (X (negate p))
+negate (E (U p q))	=	A (W (negate q) (And (negate p) (negate q)))
+negate (E (W p q))	=	A (U (negate q) (And (negate p) (negate q)))
+-- Obligation
+negate (O (U p q))	=	P (W (negate q) (And (negate p) (negate q)))
+negate (O (W p q))	=	P (U (negate q) (And (negate p) (negate q)))
+negate (O (X p))	=	P (X (negate p))
+-- Permission
+negate (P (U p q))	=	O (W (negate q) (And (negate p) (negate q)))
+negate (P (W p q))	=	O (U (negate q) (And (negate p) (negate q)))
+negate (P (X p))	=	O (X (negate p))
+
+			
+
+
+
+
+
+closure :: Set Formula -> Set (Set Formula)
+closure s =  case S.toList (S.filter (not . elementary) s) of 
+				(f:fs) 	-> 	--let sminf = S.filter ((/=) f) s in 
+							--	let subcalls = S.map (trace ("sminf = " ++ show sminf) sminf `S.union`) (break (trace ("f = " ++ show f) f)) in
+				 			--		let subresults = (trace ("subcalls = " ++ show subcalls)) S.fold S.union S.empty (S.map closure subcalls) in
+				 			let sminf = S.delete f s in 
+								let subcalls = S.map (sminf `S.union`) (break f) in
+				 					let subresults = S.fold S.union S.empty (S.map closure subcalls) in
+				 						S.map (f `S.insert`) subresults
+				[] 	-> 	S.singleton s
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
