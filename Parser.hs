@@ -12,7 +12,10 @@ parseFormula :: String -> Formula
 parseFormula s = fst (head (papply pFormula s))
 
 parseSpecification :: String -> Set Formula
-parseSpecification s =  S.fromList . fst . head $ papply pSpec s
+parseSpecification s = case papply pSpec s of
+							[(x,[])] -> S.fromList x
+							[(_,s)] -> error ("Parser error - unable to parse: " ++ s)
+							z -> error ("Parser error: " ++ s)
 
 
 pSpec :: Parser [Formula]
@@ -28,11 +31,16 @@ pFormula = pIff
 --  Iff
 --
 pIff :: Parser Formula
-pIff = pOr `chainl1` pIffOp
+pIff = pIf `chainl1` pIffOp
 
 pIffOp = symbol "<->" >> return Iff
 
+--  If
+--
+pIf :: Parser Formula
+pIf = pOr `chainl1` pIfOp
 
+pIfOp = symbol "->" >> return If
 
 --  Or
 --

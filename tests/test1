@@ -1,1 +1,4 @@
-A p U q && E X p;
+p && q;
+p <-> EX p;
+p <-> AX (r || s);
+q <-> AX !p

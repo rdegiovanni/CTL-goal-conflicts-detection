@@ -8,8 +8,8 @@ import qualified SetAux as S
 
 import Prelude hiding (break, negate)
 
-import Hugs.Observe
 import Debug.Trace
+
 
 -- dCTL Formulas 
 data Formula = 	And Formula Formula
@@ -83,6 +83,11 @@ isNegLiteral _ = False
 isLiteral :: Formula -> Bool
 isLiteral f = (isProp f) || (isNegLiteral f)
 
+isNLit = isNegLiteral
+
+isPLit = isProp
+
+
 chopEX :: Formula -> Formula
 chopEX (E (X f)) = f
 chopEX f = f
@@ -105,6 +110,20 @@ elementary F = True
 elementary _ = False
 --elementary P (X _) = True
 --elementary O (X _) = True
+
+isAlpha :: Formula -> Bool
+isAlpha f = if elementary f then 
+				False 
+			else 
+				1 == (length $ break_rule f) 
+
+isBeta :: Formula -> Bool
+isBeta f = if elementary f then 
+				False 
+			else 
+				1 < (length $ break_rule f)  
+
+
 
 
 break :: Formula -> Set (Set Formula)
@@ -131,8 +150,11 @@ break_rule (P (U p q))	=	[[Norm, q],[Norm, p, P (X (P (U p q)))]]
 break_rule (P (W p q))	=	[[Norm, q],[Norm, p, P (X (P (W p q)))]]
 break_rule (P (X p))	=	[[E(X (And Norm p))]]
 
+
+
 negate :: Formula -> Formula
 -- Propositional
+negate (Not f) 		= 	f
 negate (Or p q)		=	And (negate p) (negate q)
 negate (And p q)	= 	Or (negate p) (negate q)
 negate (If p q)		=	And p (negate q)
@@ -158,18 +180,67 @@ negate (P (U p q))	=	O (W (negate q) (And (negate p) (negate q)))
 negate (P (W p q))	=	O (U (negate q) (And (negate p) (negate q)))
 negate (P (X p))	=	O (X (negate p))
 
-			
+
+-- Branching rank: determines how many branches are introduced by the formula			
+brrk :: Formula -> Int
+brrk (Or p q)		=	brrk p + brrk q
+brrk (And p q)		= 	brrk p * brrk q	
+brrk (If p q)		=	brrk p + brrk q
+brrk (Iff p q)	=	2 * (brrk p + brrk q)
+brrk (Prop p)		=	1
+brrk Norm			=	1
+brrk T 			=	1
+brrk F 			=	0
+-- we assume NNF
+brrk (Not f) 		= 	brrk f
+-- All
+brrk (A (X p))	=	1
+brrk (A (U p q))	=	brrk p + brrk q
+brrk (A (W p q))	=	brrk p + brrk q
+-- Exists
+brrk (E (X p))	=	1
+brrk (E (U p q))	=	brrk p + brrk q
+brrk (E (W p q))	=	brrk p + brrk q
+-- Obligation
+brrk (O (U p q))	=	brrk p + brrk q
+brrk (O (W p q))	=	brrk p + brrk q
+brrk (O (X p))	=	1
+-- Permission
+brrk (P (U p q))	=	brrk p + brrk q
+brrk (P (W p q))	=	brrk p + brrk q
+brrk (P (X p))	=	1
 
 
 
+inconsistent :: Set Formula -> Bool
+inconsistent s = (S.member F s) || (not $ S.null $ S.intersection pos (S.map chopNeg neg))
+					where
+						pos = S.filter isProp s
+						neg = S.filter isNegLiteral s
+						chopNeg = \f -> case f of
+											(Not x) -> x
+											_ -> f
 
 
+{-
 closure :: Set Formula -> Set (Set Formula)
-closure s =  case S.toList (S.filter (not . elementary) s) of 
-				(f:fs) 	-> 	--let sminf = S.filter ((/=) f) s in 
-							--	let subcalls = S.map (trace ("sminf = " ++ show sminf) sminf `S.union`) (break (trace ("f = " ++ show f) f)) in
-				 			--		let subresults = (trace ("subcalls = " ++ show subcalls)) S.fold S.union S.empty (S.map closure subcalls) in
-				 			let sminf = S.delete f s in 
+closure s = let r1 = S.filter (not . inconsistent) (closure_impl s) in
+				S.fromList (pick_one_of_each (S.toList r1) [])
+
+pick_one_of_each :: [Set Formula] -> [Set Formula] -> [Set Formula]
+pick_one_of_each [] r = r
+pick_one_of_each (s:xs) r = if (any (\x -> filter_elem x == filter_elem s) r) then
+								pick_one_of_each xs r
+							else
+								pick_one_of_each xs (s:r)	
+
+	where filter_elem = S.filter $ elementary
+
+
+
+closure_impl :: Set Formula -> Set (Set Formula)
+closure_impl s =  case S.toList (S.filter (not . elementary) s) of 
+				(f:fs) 	-> let sminf = S.delete f s in 
 								let subcalls = S.map (sminf `S.union`) (break f) in
 				 					let subresults = S.fold S.union S.empty (S.map closure subcalls) in
 				 						S.map (f `S.insert`) subresults
@@ -177,15 +248,6 @@ closure s =  case S.toList (S.filter (not . elementary) s) of
 
 
 
-
-
-
-
-
-
-
-
-
-
+-}
 
 

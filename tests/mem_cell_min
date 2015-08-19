@@ -9,14 +9,9 @@ A (!w && !b2 <-> A X !b2) W False;
 
 !w;
 
-A (EX w && EX !w) W False;
+A (!w <-> AX !w) W False;
 
 A (((b0 && b1) || (b1 && b2) || (b2 && b0)) <-> val) W False;
 A (((!b0 && !b1) || (!b1 && !b2) || (!b2 && !b0)) <-> !val) W False;
 
-A ((w || !w) && (b0 || !b0) && (b1 || !b1) && (b2 || !b2) && (in || !in)) W False;
-
-A (w && in <-> A X (b0 && b1 && b2)) W False;
-
-A (w && !in <-> A X (!b0 && !b1 && !b2)) W False
-
+A ((w || !w) && (b0 || !b0) && (b1 || !b1) && (b2 || !b2) && (in || !in)) W False

@@ -13,12 +13,16 @@ import qualified Data.Map as M
 import Data.Map (Map)
 
 import Dctl
+import Closure
 
-import Data.Maybe        (isJust, fromJust, fromMaybe)
+import Data.Maybe        (isJust, fromJust, isJust, fromMaybe)
+import Data.List 		(sortBy)
+import Data.Ord
 
-import Hugs.Observe
-import Data.HashTable
 import Debug.Trace
+
+import Control.Monad
+
 
 
 
@@ -141,8 +145,7 @@ expand t@(root, nodes, rel) = case S.pick $ frontier t of
 
 do_tableaux :: Tableaux -> Tableaux
 do_tableaux t = let t' = expand t in
-					if t' == t then t else do_tableaux t'
-
+					if trace ("step : " ++ (show $ S.size $ nodes t)) t' == t then t else do_tableaux t'
 
 
 
@@ -177,18 +180,12 @@ inconsistent_node :: Node -> Bool
 inconsistent_node (AndNode s) = inconsistent s
 inconsistent_node (OrNode s) = inconsistent s
 
-inconsistent :: Set Formula -> Bool
-inconsistent s = (S.member F s) || (not $ S.null $ S.intersection pos (S.map chopNeg neg))
-					where
-						pos = S.filter isProp s
-						neg = S.filter isNegLiteral s
-						chopNeg = \f -> case f of
-											(Not x) -> x
-											_ -> f
+
 
 delete_unreachable :: Tableaux -> Tableaux
-delete_unreachable t@(root, nodes, rel) = let reach = R.lookupDom root (R.closure rel) in
-											S.fold delete_node t (nodes S.\\ (fromJust reach))
+delete_unreachable t@(root, nodes, rel) = let lookup = R.lookupDom root (R.closure rel) in
+											let reach = if isJust lookup then fromJust lookup else S.empty in 
+												S.fold delete_node t (nodes S.\\ reach)
 
 
 delete_or :: Tableaux -> Tableaux
@@ -270,6 +267,13 @@ predecesors t@(_, nodes, rel) n = case R.lookupRan n rel of
 
 
 
+{-------------------------
+
+
+		Debugging
+
+
+--------------------------}	
 
 
 
@@ -293,42 +297,25 @@ type Action = (Int, Tableaux -> Tableaux)
 do_actions ::  Int -> [Action] -> IO Tableaux -> IO Tableaux
 do_actions i [] t = t
 do_actions i ((0, f):fs) t = do_actions i fs t
-do_actions i ((k+1, f):fs) t = do
+do_actions i (((k+1), f):fs) t = do
 								tab <- t
 								writeFile ("output/out" ++ show i ++ ".dot") (tab2dot (f tab))
 								do_actions (i+1) ((k, f):fs) (return (f tab))
 
 
-				
-
-
-
-{-
-
-debug :: Int -> String -> IO Tableaux
-debug i s = (do_tableaux i) $ return $ make_tableaux $ parseFormula s
-			
-do_tableaux :: Int -> IO Tableaux -> IO Tableaux
-do_tableaux i t = do_tableaux_impl 0 i t
-
-do_tableaux_impl :: Int -> Int -> IO Tableaux -> IO Tableaux
-do_tableaux_impl i 0 t = t
-do_tableaux_impl i (k+1) t = writeFile ("output/stage" ++ (show i) ++ ".dot") (tab2dot tab)
 
 
 
 
-
-do_tableaux (i+1) t = t >>= (\tab -> writeFile ("output/stage" ++ (show i) ++ ".dot") (tab2dot tab) >> return tab) 
-						>>= (\tab -> let tab' = expand tab in 
-										if tab == tab' then 
-											putStr ("finished@" ++ show i) >> return tab
-										else
-											(do_tableaux i) $ return tab'
+{-------------------------
 
 
-							) 
--}
+		PRINTING
+
+
+--------------------------}	
+
+
 
 
 numberNodes :: Tableaux -> Map Node Int
@@ -345,16 +332,16 @@ tab2dot t@(r, nodes, rel) =  let num = numberNodes t in
 								renderArcs num t
 								++ "\n}"
 
---sortBy :: Ord b => (a -> b) -> [a] -> [a]
---sortBy f [] = []
---sortBy f x:xs = 
+order_flas :: Set Formula -> [String]
+order_flas s = reverse $ sortBy (comparing length) (S.toList (S.map show selection))
+
+	where selection = S.filter elementary s 	
 
 renderNode :: Map Node Int -> Node -> String
-renderNode num n@(OrNode s) = --let order_flas =  sortBy length (S.toList (S.map show s)) in
-								let label = (S.fold (+++) "" (S.map show s)) in
-									"n" ++ show (num M.! n) ++ " [shape=circle, label=\"" ++ label ++ "\"];" 
-renderNode num n@(AndNode s) = let label = (S.fold (+++) "" (S.map show s)) in
-							"n" ++ show (num M.! n) ++ " [shape=square, label=\"" ++ label ++ "\"];" 
+renderNode num n@(OrNode s) = let label = foldr (+++) "" (order_flas s) in
+										"n" ++ show (num M.! n) ++ " [shape=circle, label=\"" ++ label ++ "\"];" 
+renderNode num n@(AndNode s) = let label = foldr (+++) "" (order_flas s) in
+										"n" ++ show (num M.! n) ++ " [shape=square, label=\"" ++ label ++ "\"];" 
 
 
 

@@ -24,10 +24,10 @@ module ParseLib
    (Parser, item, papply, (+++), sat, many, many1, sepby, sepby1, chainl,
     chainl1, chainr, chainr1, ops, bracket, char, digit, lower, upper,
     letter, alphanum, string, ident, nat, int, spaces, comment, junk,
-    parse, token, natural, integer, symbol, identifier, module Monad) where
+    parse, token, natural, integer, symbol, identifier, module Control.Monad) where
 
-import Char
-import Monad
+import Data.Char
+import Control.Monad
 
 infixr 5 +++
 
