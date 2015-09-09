@@ -12,23 +12,22 @@ import qualified SetAux as S
 
 import Debug.Trace
 
+--main = do {
+--	args <- getArgs;
+--	str <- readFile (head args);
+--	spec <- return $ parseSpecification str;
+--	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
+--	mdo_tableaux (return $ make_tableaux spec);
+--	putStrLn ("Tableaux done.");
+--}
+
 
 main = do {
 	args <- getArgs;
 	str <- readFile (head args);
 	spec <- return $ parseSpecification str;
 	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
-	mdo_tableaux (return $ make_tableaux_spec spec);
-	putStrLn ("Tableaux done.");
-}
-
-
-main2 = do {
-	args <- getArgs;
-	str <- readFile (head args);
-	spec <- return $ parseSpecification str;
-	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
-	t <- return $ do_tableaux $ make_tableaux_spec spec;
+	t <- return $ do_tableaux $ make_tableaux spec;
 	writeFile "output/tab_pre_refine.dot" (tab2dot t);
 	putStrLn ("Tableaux done.");
 	t2 <- return $ refine_tableaux t;
@@ -36,13 +35,13 @@ main2 = do {
 }
 
 
-
+{-
 
 mparse :: IO String -> IO (Set Formula)
 mparse = fmap parseSpecification
 
 minit :: IO (Set Formula) -> IO Tableaux
-minit = fmap make_tableaux_spec
+minit = fmap make_tableaux
 
 mexpand :: IO Tableaux -> IO Tableaux
 mexpand = fmap expand
@@ -62,3 +61,4 @@ mdo_tableaux_imp i t = do
 					t2 <- mexpand t
 					if t1 == t2 then t else mdo_tableaux_imp (i+1) (return t2)
 				
+-}

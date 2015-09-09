@@ -96,7 +96,7 @@ process s@(CLSet a b u p n False) = error "CLSet process: can't process inconsis
 
 
 cl_impl :: [CLSet] -> [CLSet] -> [CLSet]
-cl_impl [] ys = {-trace ("0, " ++ (show $ length ys) ++ " - closed")-} chcheck ys
+cl_impl [] ys = {-trace ("0, " ++ (show $ length ys) ++ " - closed") chcheck-} ys
 cl_impl (x:xs) ys | closed x = {-trace (show (dup $ x:xs ++ ys) ++ " --- " ++ (show $ length xs) ++ ", " ++ (show $ length ys) ++ " - closed") $ -} cl_impl xs (x:ys)
 cl_impl (x:xs) ys | not $ closed x = {-trace (show (dup $ x:xs ++ ys) ++ " --- " ++ (show $ length xs) ++ ", " ++ (show $ length ys) ++ " - open") $ -} cl_impl ((filter consistent (process x)) ++ xs) ys
 
@@ -119,8 +119,7 @@ dup xs = null [(i, j) | i <- [0 .. length xs P.- 1], j <- [0 .. length xs P.- 1]
 
 
 closure :: Set Formula -> Set (Set Formula)
-closure s = S.fromList $ pick_one_of_each (map formulas (cl_impl (filter consistent [make_cls (trace cost s)]) [])) []
-		
+closure s = S.fromList $ map formulas (cl_impl (filter consistent [make_cls s]) [])		
 	where
 		cost = (show $ foldl ((*)) 1 x) ++ " - " ++ (show x) 
 		x = map brrk (S.toList s)

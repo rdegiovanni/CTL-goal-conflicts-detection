@@ -86,13 +86,14 @@ module Relation (
   , (*)
   , (+)
   , closure
+  , map
      
 )
 
 where
 
-import           Prelude           hiding (null, (*), (+), (<=))
-import qualified Prelude as Pre ((+))
+import           Prelude           hiding (null, (*), (+), (<=), map)
+import qualified Prelude as Pre ((+), map)
 
 import qualified Data.Map     as M
 import qualified Data.Set     as S
@@ -152,8 +153,8 @@ fromList xs =
         , range   =  M.fromListWith S.union $ flipAndSet xs
         } 
     where  
-       snd2Set    = map ( \(x,y) -> (x, S.singleton y) ) 
-       flipAndSet = map ( \(x,y) -> (y, S.singleton x) )
+       snd2Set    = Pre.map ( \(x,y) -> (x, S.singleton y) ) 
+       flipAndSet = Pre.map ( \(x,y) -> (y, S.singleton x) )
 
 
 -- |
@@ -428,7 +429,7 @@ s <| r  =  fromList $ concatMap
                ( \(x,y) -> zip (repeat x) (S.toList y) )
                ( M.toList domain' )
     where
-    domain'  =  M.unions . map filtrar . S.toList $ s
+    domain'  =  M.unions . Pre.map filtrar . S.toList $ s
     filtrar x =  M.filterWithKey (\k _ -> k == x) dr
     dr        =  domain r  -- just to memoize the value
 
@@ -441,7 +442,7 @@ r |> t =  fromList $ concatMap
                ( \(x,y) -> zip (S.toList y) (repeat x) )
                ( M.toList range' )
     where
-    range'    =  M.unions . map filtrar . S.toList $ t
+    range'    =  M.unions . Pre.map filtrar . S.toList $ t
     filtrar x =  M.filterWithKey (\k _ -> k == x) rr
     rr        =  range r   -- just to memoize the value
 
@@ -471,7 +472,20 @@ compose r r' = fromList cmp
   
     where cmp = [(a,c) |  a <- S.toList $ dom r, 
                           c <- S.toList $ ran r', 
-                          not $ S.null $ S.intersection (fromJust $ lookupDom a r) (fromJust $ lookupRan c r')]
+                          not $ S.null $ S.intersection (img a r) (preimg c r')]
+
+
+-- Auxiliary
+img     ::  Ord a =>  a -> Relation a b -> S.Set b
+img x r =   case M.lookup  x  (domain r) of
+              Nothing -> S.empty
+              (Just s) -> s
+
+-- | The Set of values associated with a value in the range.
+preimg     ::  Ord b =>  b -> Relation a b -> S.Set a
+preimg y r =  case  M.lookup  y  (range   r) of
+                Nothing -> S.empty
+                (Just s) -> s
 
 
 
@@ -479,6 +493,12 @@ closure :: (Ord a) => Relation a a -> Relation a a
 closure r = let r' = r + (r * r) in
               let iden = fromList [(x,x) | x <- S.toList (dom r `S.union` ran r)] in
               if r' <= r then r' + iden else closure r'
+
+
+
+map :: (Ord a, Ord b) => (a -> b) -> Relation a a -> Relation b b
+map f r =  fromList $ Pre.map (\p -> (f $ fst p, f $ snd p)) $ toList r
+
 
 {-
 aa = fromList [(1,2),(4,2),(2,5)]

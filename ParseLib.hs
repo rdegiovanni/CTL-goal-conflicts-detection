@@ -29,6 +29,9 @@ module ParseLib
 import Data.Char
 import Control.Monad
 
+--import Control.Applicative (Applicative(..), Alternative(..))
+--import Control.Monad       (liftM, ap, mzero, mplus)
+
 infixr 5 +++
 
 --- The parser monad ---------------------------------------------------------
@@ -52,6 +55,28 @@ instance MonadPlus Parser where
 
    -- mplus            :: Parser a -> Parser a -> Parser a
    (P p) `mplus` (P q)  = P (\inp -> (p inp ++ q inp))
+
+
+ {-
+-- Monad m
+ 
+instance Functor Parser where
+    fmap = liftM
+ 
+instance Applicative Parser where
+    pure  = return
+    (<*>) = ap
+
+-- MonadPlus m
+ 
+instance Alternative Parser where
+    (<|>) = mplus
+    empty = mzero
+
+
+-}
+
+
 
 --- Other primitive parser combinators ---------------------------------------
 
