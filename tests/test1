@@ -1,4 +1,4 @@
-p && q;
-p <-> EX p;
-p <-> AX (r || s);
-q <-> AX !p
+off -> EX on;
+on -> EX off;
+
+on
