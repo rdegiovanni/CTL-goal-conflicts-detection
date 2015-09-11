@@ -33,10 +33,10 @@ data Model = Model {
 					root :: Node, 					--root  
 					nodes :: Set Node,				-- nodes 
 					rel :: Relation Node Node		-- relation
-				} deriving (Show,Eq)
+				} deriving Eq
 
---instance Show Model where
---	show = model2dot
+instance Show Model where
+	show = model2dot
 
 
 
@@ -52,13 +52,13 @@ identify m@(Model root nodes rel) (n,n') | require = assert ensure result
 
 	where
 		-- require
-		require = (n /= n') && S.member n nodes && S.member n' nodes && formulas n == formulas n'
+		require = S.member n nodes && S.member n' nodes && formulas n == formulas n'
 		-- ensure
 		ensure = S.member n new_nodes || S.member n' new_nodes
 		-- aux 
 		result = Model root new_nodes new_rel
-		new_nodes = (nodes S.<\\ n')
-		new_rel = R.fromList $ map (\(x,y) -> (if x == n' then n else x, if y == n' then n else y)) rel_pairs
+		new_nodes = if n == n' then nodes else (nodes S.<\\ n')
+		new_rel = if n == n' then R.insert n n' rel else R.fromList $ map (\(x,y) -> (if x == n' then n else x, if y == n' then n else y)) rel_pairs
 		--new_rel = R.fromList ((rel_pairs \\ to_remove) ++ to_add)
 		--to_add = map (\p -> (if fst p == n' then n else fst p, if snd p == n' then n else snd p)) to_remove
 		--to_remove = filter (\p -> (fst p)  == n' || (snd p) == n') rel_pairs

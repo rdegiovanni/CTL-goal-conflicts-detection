@@ -12,6 +12,9 @@ import qualified SetAux as S
 
 import Debug.Trace
 
+import qualified Model as Model
+import Model (Model)
+
 --main = do {
 --	args <- getArgs;
 --	str <- readFile (head args);
@@ -27,11 +30,16 @@ main = do {
 	str <- readFile (head args);
 	spec <- return $ parseSpecification str;
 	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
+	putStr ("Tableaux .. ");
 	t <- return $ do_tableaux $ make_tableaux spec;
-	writeFile "output/tab_pre_refine.dot" (tab2dot t);
-	putStrLn ("Tableaux done.");
+	putStrLn ("done.");
+	putStr ("Refining tableaux .. ");
 	t2 <- return $ refine_tableaux t;
-	writeFile "output/out.dot" (tab2dot t2)
+	putStrLn ("done.");
+	writeFile "output/tableaux.dot" (tab2dot t2);
+	putStrLn ("Extracting model.");
+	writeFile "output/model.dot" (Model.model2dot $ model t2)
+	
 }
 
 

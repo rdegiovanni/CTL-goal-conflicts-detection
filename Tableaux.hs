@@ -404,9 +404,9 @@ tab_to_model k t@(Tableaux r ns rel) = Model.Model (trans r) (S.fromList mnodes)
 
 frag :: Int -> Tableaux -> Node -> Model
 frag k t n@(AndNode _) = 	if null eventualities then 
-					trace "noeven" $ tab_to_model k $ build_frag_noeven t n
+					tab_to_model k $ build_frag_noeven t n
 				else	
-					build_frag  (k+k') t (tail eventualities) initm --((trace $ "initm \n\n " ++ show initm)  initm)
+					build_frag  (k+k') t (tail eventualities) initm 
 
 	where 
 		k' = Model.size initm
@@ -416,9 +416,10 @@ frag k t n@(AndNode _) = 	if null eventualities then
 
 
 build_frag_noeven :: Tableaux -> Node -> Tableaux
-build_frag_noeven t n@(AndNode _) = Tableaux n new_nodes new_rel
+build_frag_noeven t n@(AndNode _) = result
 
 	where
+		result = Tableaux n new_nodes new_rel
 		new_rel = R.fromList $ [(n,l1) | l1 <- S.toList $ level1] ++ [(l1,l2) | l1 <- S.toList $ level1, l2 <- S.toList $ level2, R.member l1 l2 (rel t)] --new_nodes R.<| (rel t) R.|> new_nodes
 		new_nodes = level1 S.+ level2 S.<+ n	
 		level2 = S.map (fromJust . S.pick) $ S.map (succesors t) level1
@@ -465,7 +466,7 @@ model t = build_model k fr (S.toList $ Model.frontier $ init_model) t init_model
 build_model :: Int -> Set (Node, Model.Node) -> [Model.Node] -> Tableaux -> Model -> Model
 build_model k froots [] t mres = mres
 build_model k froots (mn:mns) t mres = case da_one of
-										(Just pair) -> build_model k froots (mns) t new_model_just
+										(Just pair) -> build_model k froots (mns) t  new_model_just
 										Nothing -> build_model (k'+1) (froots S.<+ (c,mn)) new_front t new_model_noth						
 
 	where
@@ -475,7 +476,8 @@ build_model k froots (mn:mns) t mres = case da_one of
 		da_frag = frag (k+1) t c
 		c = (find_and t mn)
 		new_model_just = let p = (mn, snd $ fromJust $ da_one) in Model.identify mres p --- (trace ("p = " ++ (show p) ++ " " ++ (show $ fst p == snd p)) p)
-		da_one = S.pick $ S.filter (\p -> fst p == find_and t mn && notElem (snd p) (mn:mns)) froots 
+		da_one = S.pick $ S.filter (\p -> fst p == find_and t mn {-&& notElem (snd p) (mn:mns)-}) froots 
+		---trrr = trace $ "Current model ----------------------\n" ++ show mres
 
 
 
