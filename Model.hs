@@ -88,7 +88,14 @@ paste m i m' r = (flip identify) (i, r) $ Model (root m) (nodes m S.+ nodes m') 
 
 
 
-
+flatten :: Model -> Model
+flatten m@(Model root nodes rel) = Model root' nodes' rel'
+	
+	where
+		root' = strip root
+		nodes' = S.map strip nodes
+		rel' = R.map strip rel
+		strip = \n -> Node (id n) (S.filter isLiteral $ formulas n)	 
 
 
 

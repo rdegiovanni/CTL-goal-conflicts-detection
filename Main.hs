@@ -38,8 +38,7 @@ main = do {
 	putStrLn ("done.");
 	writeFile "output/tableaux.dot" (tab2dot t2);
 	putStrLn ("Extracting model.");
-	writeFile "output/model.dot" (Model.model2dot $ model t2)
-	
+	writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2)
 }
 
 
