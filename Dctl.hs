@@ -32,6 +32,7 @@ data Formula = 	And Formula Formula
 data PFormula 	= 	U Formula Formula
 				|	W Formula Formula
 				|	X Formula
+				|	G Formula
 				deriving (Eq,Ord)
 
 
@@ -53,7 +54,9 @@ instance Show Formula where
 instance Show PFormula where
 	show (U p q) 	=	"(" ++ show p ++ " U " ++ show q ++ ")"
 	show (W p q) 	=	"(" ++ show p ++ " W " ++ show q ++ ")"
-	show (X p) 	=	"(" ++ "X" ++ show p ++ ")" 
+	show (X p) 	=	"(" ++ "X" ++ show p ++ ")"
+	show (G p) 	=	"G (" ++ show p ++ ")"
+	 
 
 
 isAX :: Formula -> Bool
@@ -138,9 +141,11 @@ break_rule (Iff p q)	=	[[negate p, negate q],[p,q]]
 -- All
 break_rule (A (U p q))	=	[[q],[p, A (X (A (U p q)))]]
 break_rule (A (W p q))	=	[[q],[p, A (X (A (W p q)))]]
+break_rule (A (G p))	=	[[p, A (X (A (G p)))]]
 -- Exists
 break_rule (E (U p q))	=	[[q],[p, E (X (E (U p q)))]]
 break_rule (E (W p q))	=	[[q],[p, E (X (E (W p q)))]]
+break_rule (E (G p))	=	[[p, E (X (E (G p)))]]
 -- Obligation
 break_rule (O (U p q))	=	[[Norm, q],[Norm, p, O (X (O (U p q)))]]
 break_rule (O (W p q))	=	[[Norm, q],[Norm, p, O (X (O (W p q)))]]

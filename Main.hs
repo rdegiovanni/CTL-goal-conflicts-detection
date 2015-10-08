@@ -15,19 +15,14 @@ import Debug.Trace
 import qualified Model as Model
 import Model (Model)
 
---main = do {
---	args <- getArgs;
---	str <- readFile (head args);
---	spec <- return $ parseSpecification str;
---	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
---	mdo_tableaux (return $ make_tableaux spec);
---	putStrLn ("Tableaux done.");
---}
-
-
 main = do {
 	args <- getArgs;
-	str <- readFile (head args);
+	run_tableaux $ head args
+}
+
+
+run_tableaux = \path -> do {
+	str <- readFile path;
 	spec <- return $ parseSpecification str;
 	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
 	putStr ("Tableaux .. ");
@@ -47,31 +42,3 @@ main = do {
 		putStrLn ("The specification is inconsistent.")
 }
 
-
-{-
-
-mparse :: IO String -> IO (Set Formula)
-mparse = fmap parseSpecification
-
-minit :: IO (Set Formula) -> IO Tableaux
-minit = fmap make_tableaux
-
-mexpand :: IO Tableaux -> IO Tableaux
-mexpand = fmap expand
-
-mdump :: Int -> IO Tableaux -> IO Tableaux
-mdump i t = do
-			tab <- t
-			writeFile ("output/out" ++ show i ++ ".dot") (tab2dot tab)
-			t
-
-mdo_tableaux = (mdo_tableaux_imp 0)
-
-mdo_tableaux_imp :: Int -> IO Tableaux -> IO Tableaux
-mdo_tableaux_imp i t = do
-					t1 <- t	
-					mdump i t
-					t2 <- mexpand t
-					if t1 == t2 then t else mdo_tableaux_imp (i+1) (return t2)
-				
--}

@@ -72,13 +72,15 @@ pQuan =   (symbol "A" >> return A) +++
 -- Path formulas
 --
 pPath :: Parser PFormula
-pPath = pX +++ pU +++ pW
+pPath = pX +++ pU +++ pW +++ pG
 
 pX = do { symbol "X"; f <- pLowLevel; return (X f) }
 
 pU = do { f1 <- pLowLevel; symbol "U"; f2 <- pLowLevel; return (U f1 f2) }
 
 pW = do { f1 <- pLowLevel; symbol "W"; f2 <- pLowLevel; return (W f1 f2) }
+
+pG = do { f1 <- symbol "G"; f <- pLowLevel; return (G f) }
 
 
 
