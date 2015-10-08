@@ -71,7 +71,7 @@ frontier t = nodes t S.\\ (R.dom . rel) t
 
 
 blocks :: Node -> Set Node
-blocks (OrNode s) = S.map AndNode $ closure s
+blocks (OrNode s) = S.map AndNode $ old_closure s
 
 
 tiles :: Node -> Set Node

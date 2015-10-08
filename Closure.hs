@@ -1,5 +1,6 @@
 module Closure (
-	closure
+	closure,
+	old_closure
 	) 
 
 where
@@ -138,6 +139,19 @@ pick_one_of_each (s:xs) r = if (any (\x -> filter_elem x == filter_elem s) r) th
 
 
 
+
+
+
+
+-- Original Version
+
+old_closure :: Set Formula -> Set (Set Formula)
+old_closure s =  case S.toList (S.filter (not . elementary) s) of 
+				(f:fs) 	-> let sminf = S.delete f s in 
+								let subcalls = S.map (sminf `S.union`) (Dctl.break f) in
+				 					let subresults = S.fold S.union S.empty (S.map old_closure subcalls) in
+				 						S.map (f `S.insert`) subresults
+				[] 	-> 	S.singleton s
 
 
 
