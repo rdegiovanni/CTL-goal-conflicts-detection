@@ -33,12 +33,18 @@ main = do {
 	putStr ("Tableaux .. ");
 	t <- return $ do_tableaux $ make_tableaux spec;
 	putStrLn ("done.");
+	writeFile "output/tableaux_raw.dot" (tab2dot t);
 	putStr ("Refining tableaux .. ");
 	t2 <- return $ refine_tableaux t;
 	putStrLn ("done.");
-	writeFile "output/tableaux.dot" (tab2dot t2);
-	putStrLn ("Extracting model.");
-	writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2)
+	if not $ S.null $ nodes t2 then 
+		do {
+			writeFile "output/tableaux.dot" (tab2dot t2);
+			putStrLn ("Extracting model.");
+			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2)
+		}
+	else
+		putStrLn ("The specification is inconsistent.")
 }
 
 

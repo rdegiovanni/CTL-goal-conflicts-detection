@@ -213,6 +213,8 @@ brrk (P (X p))	=	1
 
 
 inconsistent :: Set Formula -> Bool
+inconsistent s | (S.member F s) = True
+inconsistent s | (S.member Norm s && S.member (Not Norm) s) = True
 inconsistent s = (S.member F s) || (not $ S.null $ S.intersection pos (S.map chopNeg neg))
 					where
 						pos = S.filter isProp s
