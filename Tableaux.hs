@@ -191,7 +191,8 @@ delete_or t = let to_delete = S.filter (\n -> isOr n && S.null (succesors t n)) 
 
 
 checkEU :: Tableaux -> Node -> Formula -> Bool
-checkEU t n f = checkEU_impl t n f S.empty
+checkEU t n f = let val = fromJust $ M.lookup n (tagmap t f) in
+					val /= pinf && val /= ninf-- checkEU_impl t n f S.empty
 
 
 checkEU_impl :: Tableaux -> Node -> Formula -> Set Node -> Bool
@@ -212,20 +213,20 @@ delete_EU t = let eus = [(n,f) | n <- S.toList $ nodes t, f <- S.toList $ formul
 
 
 checkAU :: Tableaux -> Node -> Formula -> Bool
-checkAU t n f = checkAU_impl t n f S.empty
+checkAU t n f = let val = fromJust $ M.lookup n (tagmap t f) in
+					val /= pinf && val /= ninf --checkAU_impl t n f S.empty
 
 
 checkAU_impl :: Tableaux -> Node -> Formula -> Set Node -> Bool
 checkAU_impl t n@(OrNode s) f@(A (U g h)) v = S.some (\m -> checkAU_impl t m f (n `S.insert` v)) ((succesors t n) `S.difference` v)
 checkAU_impl t n@(AndNode s) f@(A (U g h)) v = if S.member h s then 
-											True
-										else
-											S.member g s && S.all (\m -> checkAU_impl t m f (n `S.insert` v)) ((succesors t n) `S.difference` v)
-
+													True
+												else
+													S.member g s && S.all (\m -> checkAU_impl t m f (n `S.insert` v)) ((succesors t n) `S.difference` v)
 
 delete_AU :: Tableaux -> Tableaux
 delete_AU t = let aus = [(n,f) | n <- S.toList $ nodes t, f <- S.toList $ formulas n, isAU f] in
-				let to_delete0 = filter (\(m,g) -> not (checkAU t m g)) aus in
+				let to_delete0 = {-(trace ("aus = " ++ show aus)) -} filter (\(m,g) -> not (checkAU t m g)) aus in
 					let to_delete1 = map fst to_delete0 in 
 						foldl (flip delete_node) t to_delete1
 
