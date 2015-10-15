@@ -604,11 +604,11 @@ renderNode num n@(AndNode s) = let label = foldr (+++) "" (order_flas s) in
 
 
 renderArcs :: Map Node Int -> Tableaux -> String
-renderArcs num t@(Tableaux r nodes rel l) = foldl (+++) "" (map (uncurry (renderOneArc num)) (R.toList rel))
+renderArcs num t@(Tableaux r nodes rel l) = foldl (+++) "" (map (uncurry (renderOneArc num l)) (R.toList rel))
 
-renderOneArc :: Map Node Int -> Node -> Node -> String
-renderOneArc num n n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n') 
-
+renderOneArc :: Map Node Int -> Map (Node,Node) [Formula] -> Node -> Node -> String
+renderOneArc num l n@(OrNode s) n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n') ++ "[label=\"" ++ (show (l M.! (n,n'))) ++ "\"]"
+renderOneArc num l n n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n')
 
 
 

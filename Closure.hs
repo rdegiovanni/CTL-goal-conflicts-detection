@@ -67,6 +67,7 @@ s@(CLSet a b u p n c l) +++ F  = CLSet a b (F + u) p n False l
 
 s@(CLSet a b u p n c l) +++ f | elementary f 	= CLSet a b (f + u) p n c l
 
+-- case And _ _
 s@(CLSet a b u p n c l) +++ f | splits  		= CLSet a (f + b) (f + u) p n c l
 	where splits = 1 < (length $ break_rule f)	
 
