@@ -27,11 +27,12 @@ data CLSet = CLSet {
 				used :: Set Formula,
 				pvs :: Set Formula,
 				nvs :: Set Formula,
-				consistent :: Bool
+				consistent :: Bool,
+				label :: [Formula]
 			} deriving (Show, Eq)
 
 empty :: CLSet
-empty = CLSet S.empty S.empty S.empty S.empty S.empty True
+empty = CLSet S.empty S.empty S.empty S.empty S.empty True []
 
 make_cls :: Set Formula -> CLSet
 make_cls s = if repOK res then res else error "repOk violation in make_cls"
@@ -53,53 +54,53 @@ closed s = S.null (alpha s) && S.null (beta s)
 
 
 (+++) :: CLSet -> Formula -> CLSet
-s@(CLSet a b u p n c) +++ f@(Prop _) 			= let c' = c && (not $ S.member f n) in
-													let res = CLSet a b (f + u) (f + p) n c' in
+s@(CLSet a b u p n c l) +++ f@(Prop _) 			= let c' = c && (not $ S.member f n) in
+													let res = CLSet a b (f + u) (f + p) n c' l in
 														if repOK res then res else error "repOk violation in +++"
 
-s@(CLSet a b u p n c) +++ f@(Not f'@(Prop _)) = let c' = c && (not $ S.member f' p) in
-													let res = CLSet a b (f + u) p (f' + n) c' in
+s@(CLSet a b u p n c l) +++ f@(Not f'@(Prop _)) = let c' = c && (not $ S.member f' p) in
+													let res = CLSet a b (f + u) p (f' + n) c' l in
 														if repOK res then res else error "repOk violation in +++"
 
 
-s@(CLSet a b u p n c) +++ F  = CLSet a b (F + u) p n False
+s@(CLSet a b u p n c l) +++ F  = CLSet a b (F + u) p n False l
 
-s@(CLSet a b u p n c) +++ f | elementary f 	= CLSet a b (f + u) p n c
+s@(CLSet a b u p n c l) +++ f | elementary f 	= CLSet a b (f + u) p n c l
 
-s@(CLSet a b u p n c) +++ f | splits  		= CLSet a (f + b) (f + u) p n c
+s@(CLSet a b u p n c l) +++ f | splits  		= CLSet a (f + b) (f + u) p n c l
 	where splits = 1 < (length $ break_rule f)	
 
-s@(CLSet a b u p n c) +++ f | otherwise		= CLSet (f + a) b (f + u) p n c
+s@(CLSet a b u p n c l) +++ f | otherwise		= CLSet (f + a) b (f + u) p n c l
 
 
 
 
 process :: CLSet -> [CLSet]
-process s@(CLSet a b u p n True) | not $ S.null a = map process_alt alts
+process s@(CLSet a b u p n True l) | not $ S.null a = map process_alt alts
 
 		where
-			process_alt = \alt -> foldl (+++) (CLSet (a - fa) b u p n True) alt
+			process_alt = \alt -> foldl (+++) (CLSet (a - fa) b u p n True l) alt
 			alts = break_rule fa
 			fa = fromJust $ S.pick a
 
-process s@(CLSet a b u p n True) | not $ S.null b = map process_alt alts
+process s@(CLSet a b u p n True l) | not $ S.null b = map process_alt alts
 
 		where
-			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n True) alt
+			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n True (l++alt)) alt
 			alts = break_rule fb
 			fb = fromJust $ S.pick b
 
-process s@(CLSet a b u p n True) | otherwise = error "CLSet process: error in pattern matching"
-process s@(CLSet a b u p n False) = error "CLSet process: can't process inconsistent set"
+process s@(CLSet a b u p n True l) | otherwise = error "CLSet process: error in pattern matching"
+process s@(CLSet a b u p n False l) = [] --(trace ("s = " ++ (show s))) error "CLSet process: can't process inconsistent set"
 
 
 
 
 
 cl_impl :: [CLSet] -> [CLSet] -> [CLSet]
-cl_impl [] ys = {-trace ("0, " ++ (show $ length ys) ++ " - closed") chcheck-} ys
-cl_impl (x:xs) ys | closed x = {-trace (show (dup $ x:xs ++ ys) ++ " --- " ++ (show $ length xs) ++ ", " ++ (show $ length ys) ++ " - closed") $ -} cl_impl xs (x:ys)
-cl_impl (x:xs) ys | not $ closed x = {-trace (show (dup $ x:xs ++ ys) ++ " --- " ++ (show $ length xs) ++ ", " ++ (show $ length ys) ++ " - open") $ -} cl_impl ((filter consistent (process x)) ++ xs) ys
+cl_impl [] ys = ys
+cl_impl (x:xs) ys | closed x = cl_impl xs (x:ys)
+cl_impl (x:xs) ys | not $ closed x = cl_impl ((process x) ++ xs) ys
 
 -- for debuging
 chcheck :: [CLSet] -> [CLSet]
@@ -111,19 +112,19 @@ chcheck ys = case ccc of
 		ccc = find (not . repOK) ys
 
 repOK :: CLSet -> Bool
-repOK s@(CLSet _ _ _ _ _ False) = (inconsistent . formulas) s == True
-repOK s@(CLSet _ _ _ _ _ True) = (inconsistent . formulas) s == False
+repOK s@(CLSet _ _ _ _ _ False _) = (inconsistent . formulas) s == True
+repOK s@(CLSet _ _ _ _ _ True _) = (inconsistent . formulas) s == False
 
 -- for debbuging
 dup :: [CLSet] -> Bool
 dup xs = null [(i, j) | i <- [0 .. length xs P.- 1], j <- [0 .. length xs P.- 1], xs!!i == xs!!j && i /= j] 
 
 
-closure :: Set Formula -> Set (Set Formula)
-closure s = S.fromList $ map formulas (cl_impl (filter consistent [make_cls s]) [])		
-	where
-		cost = (show $ foldl ((*)) 1 x) ++ " - " ++ (show x) 
-		x = map brrk (S.toList s)
+closure :: Set Formula -> Set (Set Formula, [Formula])
+closure s = S.fromList $ map (\c -> (formulas c, label c)) (cl_impl [make_cls s] [])		
+	--where
+	--	cost = (show $ foldl ((*)) 1 x) ++ " - " ++ (show x) 
+	--	x = map brrk (S.toList s)
 
 
 
