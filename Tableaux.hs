@@ -16,7 +16,7 @@ import Dctl
 import Closure
 
 import Data.Maybe        (isJust, fromJust, isJust, fromMaybe)
-import Data.List 		(sortBy, (\\))
+import Data.List as L	(sortBy, (\\))
 import Data.Ord
 
 import Debug.Trace
@@ -254,18 +254,65 @@ refine_tableaux t = let t' = deletion_rules t in
 
 
 
+{-------------------------
 
--- Tableaux Aux
+
+Tableaux Navigation functions 
+
+
+--------------------------}	
+
 succesors :: Tableaux -> Node -> Set Node
 succesors t n = case R.lookupDom n $ rel t of
 									Just s -> s
 									Nothing -> S.empty
 
--- Tableaux Aux
+
 predecesors :: Tableaux -> Node -> Set Node
 predecesors t n = case R.lookupRan n $ rel t of
 									Just s -> s
 									Nothing -> S.empty
+
+reachables :: Tableaux -> Node -> Set Node
+reachables t n = let lookup = R.lookupDom (root t) (R.closure (rel t)) in
+					let reach = if isJust lookup then fromJust lookup else S.empty in 
+						reach
+
+unreachables :: Tableaux -> Node -> Set Node
+unreachables t n = (nodes t) S.\\ (reachables t n)
+
+isReachable :: Tableaux -> Node -> Node -> Bool
+isReachable t n n' = n' `S.member` (reachables t n)
+
+
+{-
+paths_from :: Tableaux -> Node -> [[Node]]
+paths_from t n = let succs = S.toList (succesors t n) in
+					let sons = concat(map (\x -> paths_from t x) succs) in
+						map (\xxs -> n:xxs) sons
+-}
+
+pathsBFS :: Tableaux -> [[Node]]
+pathsBFS t = pathsBFSaux t (root t) []
+
+pathsBFSaux :: Tableaux -> Node -> [Node] -> [[Node]]
+pathsBFSaux t n visited = let succs = (S.toList (succesors t n)) \\ visited in
+							let visited' = visited ++ succs in
+								let sons = concat (map (\x -> pathsBFSaux t x (visited')) succs) in
+									map (\xxs -> n:xxs) sons
+
+paths_from_to :: Tableaux -> Node -> Node -> [[Node]]
+paths_from_to t n n' | not (isReachable t n n') = []
+paths_from_to t n n' | otherwise = paths_from_to_aux t n n' []
+
+-- precondition: n' is reachable from n
+paths_from_to_aux :: Tableaux -> Node -> Node -> [Node] -> [[Node]]
+paths_from_to_aux t n n' visited | (n == n') = [] 
+paths_from_to_aux t n n' visited | otherwise = let succs = (S.toList (succesors t n)) \\ visited in
+													let visited' = visited ++ succs in
+														let sons = concat (map (\x -> pathsBFSaux t x (visited')) succs) in
+															map (\xxs -> n:xxs) sons
+
 
 
 

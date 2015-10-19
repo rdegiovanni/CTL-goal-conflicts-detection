@@ -15,13 +15,15 @@ import Debug.Trace
 import qualified Model as Model
 import Model (Model)
 
+import Conflict
+
 main = do {
 	args <- getArgs;
-	run_tableaux $ head args
+	test_tableaux $ head args
 }
 
 
-run_tableaux = \path -> do {
+test_tableaux = \path -> do {
 	str <- readFile path;
 	spec <- return $ parseSpecification str;
 	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
@@ -39,6 +41,8 @@ run_tableaux = \path -> do {
 			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2)
 		}
 	else
-		putStrLn ("The specification is inconsistent.")
+		putStrLn ("The specification is inconsistent.");
+
+	return t
 }
 

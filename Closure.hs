@@ -77,24 +77,22 @@ s@(CLSet a b u p n c l) +++ f | otherwise		= CLSet (f + a) b (f + u) p n c l
 
 
 process :: CLSet -> [CLSet]
-process s@(CLSet a b u p n True l) | not $ S.null a = map process_alt alts
+process s@(CLSet a b u p n c l) | not $ S.null a = map process_alt alts
 
 		where
-			process_alt = \alt -> foldl (+++) (CLSet (a - fa) b u p n True l) alt
+			process_alt = \alt -> foldl (+++) (CLSet (a - fa) b u p n c l) alt
 			alts = break_rule fa
 			fa = fromJust $ S.pick a
 
-process s@(CLSet a b u p n True l) | not $ S.null b = map process_alt alts
+process s@(CLSet a b u p n c l) | not $ S.null b = map process_alt alts
 
 		where
-			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n True (l++alt)) alt
+			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n c (l++alt)) alt
 			alts = break_rule fb
 			fb = fromJust $ S.pick b
 
-process s@(CLSet a b u p n True l) | otherwise = error "CLSet process: error in pattern matching"
-process s@(CLSet a b u p n False l) = [] --(trace ("s = " ++ (show s))) error "CLSet process: can't process inconsistent set"
-
-
+process s@(CLSet a b u p n _ l) | otherwise = error "CLSet process: error in pattern matching"
+--process s@(CLSet a b u p n False l) = [] --(trace ("s = " ++ (show s))) error "CLSet process: can't process inconsistent set"
 
 
 

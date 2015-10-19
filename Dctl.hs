@@ -33,6 +33,7 @@ data PFormula 	= 	U Formula Formula
 				|	W Formula Formula
 				|	X Formula
 				|	G Formula
+				|	FF Formula
 				deriving (Eq,Ord)
 
 
@@ -142,10 +143,14 @@ break_rule (Iff p q)	=	[[negate p, negate q],[p,q]]
 break_rule (A (U p q))	=	[[q],[p, A (X (A (U p q)))]]
 break_rule (A (W p q))	=	[[q],[p, A (X (A (W p q)))]]
 break_rule (A (G p))	=	[[p, A (X (A (G p)))]]
+break_rule (A (FF p))	=	[[p], [A (X (A (FF p)))]]
+
 -- Exists
 break_rule (E (U p q))	=	[[q],[p, E (X (E (U p q)))]]
 break_rule (E (W p q))	=	[[q],[p, E (X (E (W p q)))]]
 break_rule (E (G p))	=	[[p, E (X (E (G p)))]]
+break_rule (E (FF p))	=	[[p], [E (X (E (FF p)))]]
+
 -- Obligation
 break_rule (O (U p q))	=	[[Norm, q],[Norm, p, O (X (O (U p q)))]]
 break_rule (O (W p q))	=	[[Norm, q],[Norm, p, O (X (O (W p q)))]]
