@@ -19,11 +19,11 @@ import Conflict
 
 main = do {
 	args <- getArgs;
-	test_tableaux $ head args
+	run_tableaux $ head args
 }
 
 
-test_tableaux = \path -> do {
+run_tableaux = \path -> do {
 	str <- readFile path;
 	spec <- return $ parseSpecification str;
 	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
@@ -38,11 +38,24 @@ test_tableaux = \path -> do {
 		do {
 			writeFile "output/tableaux.dot" (tab2dot t2);
 			putStrLn ("Extracting model.");
-			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2)
+			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2);
+			run_conflicts_detection t;
+			--return ()
 		}
 	else
-		putStrLn ("The specification is inconsistent.");
+		putStrLn ("STRONG conflict detected. The specification is inconsistent.");
 
 	return t
+}
+
+run_conflicts_detection = \t -> do {
+	conf_set <- return $ conflicts t;
+	if S.null conf_set then 
+			putStrLn ("No WEAK conflict detected.");
+	else
+		do {
+			putStrLn ("WEAK conflict detected.");
+			putStrLn (show conf_set)
+		}
 }
 

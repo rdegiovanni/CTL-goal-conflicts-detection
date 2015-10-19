@@ -13,6 +13,8 @@ import qualified Data.Set as S
 import Data.Set (Set)
 import qualified SetAux as S
 
+import Data.List as L	(sortBy, (\\))
+
 import Data.Maybe        (isJust, fromJust, fromMaybe)
 
 import Prelude hiding ((+), (-))
@@ -87,8 +89,9 @@ process s@(CLSet a b u p n c l) | not $ S.null a = map process_alt alts
 process s@(CLSet a b u p n c l) | not $ S.null b = map process_alt alts
 
 		where
-			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n c (l++alt)) alt
+			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n c (l++(complement alt))) alt
 			alts = break_rule fb
+			complement = \al -> (concat alts) \\ al
 			fb = fromJust $ S.pick b
 
 process s@(CLSet a b u p n _ l) | otherwise = error "CLSet process: error in pattern matching"

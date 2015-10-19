@@ -314,8 +314,6 @@ paths_from_to_aux t n n' visited | otherwise = let succs = (S.toList (succesors 
 															map (\xxs -> n:xxs) sons
 
 
-
-
 {-------------------------
 
 
