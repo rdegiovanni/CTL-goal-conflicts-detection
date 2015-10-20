@@ -40,7 +40,7 @@ common_path t cand = let cand_parents = S.map (predecesors t) cand inconsistent_
 common_path :: Tableaux -> Set Node -> [Formula]
 common_path t ns = let ns_paths = S.map (common_path_to t) ns in
 						--(trace ("ns_paths = " ++ show ns_paths)) 
-						concat (S.toList ns_paths)
+						L.nub $ concat (S.toList ns_paths)
 
 common_path_to :: Tableaux -> Node -> [Formula]
 common_path_to t n = let n_parents = predecesors t n in
@@ -50,14 +50,14 @@ common_path_to t n = let n_parents = predecesors t n in
 							S.toList (S.unions (S.toList n_parent_paths))
 
 
-multiple_intersect :: [[Formula]] -> [Formula]
+{-multiple_intersect :: [[Formula]] -> [Formula]
 multiple_intersect [] = []
 multiple_intersect [xs] = xs
 multiple_intersect xss = L.intersect xs (multiple_intersect yss)
 						where
 							xs = head xss
 							yss = tail xss
-
+-}
 --branch condition in one step
 branch_condition :: Tableaux -> Node -> Node -> [Formula]
 branch_condition t n n' = (label t) M.! (n,n')
