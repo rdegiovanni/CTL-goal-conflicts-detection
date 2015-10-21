@@ -1,0 +1,4 @@
+(!hw && !m && !po);
+
+AG (hw -> AX(po));
+AG (m -> AX(!po))
