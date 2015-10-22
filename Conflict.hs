@@ -23,24 +23,25 @@ import Debug.Trace
 
 --Compute conflicts
 conflicts :: Tableaux -> Set [Formula]
---conflicts t | not S.null (inconsistent_nodes t) = []
-conflicts t = let inconsistent_nodes = S.filter (\n -> (inconsistent_node n) && (isOr n)) (nodes t) in
-					let inconsistent_predecesors = {-(trace ("inconsistent_nodes = " ++ show inconsistent_nodes))-} S.map (predecesors t) inconsistent_nodes in
-						let candidate_nodes = {-(trace ("inconsistent_predecesors = " ++ show inconsistent_predecesors))-} S.map (\s -> S.filter (\n -> not $ inconsistent_node n) s) inconsistent_predecesors in
-						--S.map (\ip -> ip S.\\ inconsistent_nodes) inconsistent_predecesors in
-							let candidate_conflicts = {-(trace ("candidate_nodes = " ++ show candidate_nodes))-} S.map (common_path t) candidate_nodes in
+conflicts t = let inconsistent_nodes = inconsistent_OR_nodes t in
+					let inconsistent_predecesors =  S.map (predecesors t) inconsistent_nodes in
+						let candidate_nodes =  S.map (\s -> S.filter (\n -> not $ inconsistent_node n) s) inconsistent_predecesors in
+							let candidate_conflicts = S.map (common_path t) candidate_nodes in
 								--(trace ("candidate_conflicts = " ++ show candidate_conflicts)) 
 								candidate_conflicts
 
-{-common_path :: Tableaux -> Set Node -> [Formula]
-common_path t cand = let cand_parents = S.map (predecesors t) cand inconsistent_nodes in 
-						let 
-	S.intersection 
--}
+
+--return the inconsistent OR nodes: all sons are inconsistent
+inconsistent_OR_nodes :: Tableaux -> Set Node
+inconsistent_OR_nodes t = let orNodes = S.filter isOr (nodes t) in
+							let inconsistent_orNodes = S.filter (\n -> S.all (inconsistent_node) (succesors t n)) orNodes in
+								inconsistent_orNodes
+
 common_path :: Tableaux -> Set Node -> [Formula]
 common_path t ns = let ns_paths = S.map (common_path_to t) ns in
-						--(trace ("ns_paths = " ++ show ns_paths)) 
-						L.nub $ concat (S.toList ns_paths)
+						(trace ("ns_paths = " ++ show ns_paths)) 
+						L.nub $ concat (S.toList ns_paths) --unions
+						--multiple_intersect (S.toList ns_paths)
 
 common_path_to :: Tableaux -> Node -> [Formula]
 common_path_to t n = let n_parents = predecesors t n in
@@ -50,26 +51,16 @@ common_path_to t n = let n_parents = predecesors t n in
 							S.toList (S.unions (S.toList n_parent_paths))
 
 
-{-multiple_intersect :: [[Formula]] -> [Formula]
+multiple_intersect :: [[Formula]] -> [Formula]
 multiple_intersect [] = []
 multiple_intersect [xs] = xs
 multiple_intersect xss = L.intersect xs (multiple_intersect yss)
 						where
 							xs = head xss
 							yss = tail xss
--}
+
+
 --branch condition in one step
 branch_condition :: Tableaux -> Node -> Node -> [Formula]
 branch_condition t n n' = (label t) M.! (n,n')
-
---Path Condition
---  It characterises uniquely the path from node n to node n' 
---  when n' is reachable from n.
-
---path_condition_one_step :: Tableaux -> Node -> Node -> [[Formula]]
---path_condition_one_step t n n' | not (S.member n' (succesors t n)) = []
---path_condition_one_step t n n' | otherwise = let others = S.delete n' (succesors t n) in
---												map (branch_condition t n) (S.toList others)
-
-
 

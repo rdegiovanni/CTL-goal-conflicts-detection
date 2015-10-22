@@ -91,7 +91,7 @@ process s@(CLSet a b u p n c l) | not $ S.null b = map process_alt alts
 		where
 			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n c (l++(complement alt))) alt
 			alts = break_rule fb
-			complement = \al -> (concat alts) \\ al
+			complement = \al -> map Dctl.negate ((concat alts) \\ al)
 			fb = fromJust $ S.pick b
 
 process s@(CLSet a b u p n _ l) | otherwise = error "CLSet process: error in pattern matching"

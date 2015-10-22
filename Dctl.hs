@@ -178,10 +178,14 @@ negate F 			=	T
 negate (A (X p))	=	E (X (negate p))
 negate (A (U p q))	=	E (W (negate q) (And (negate p) (negate q)))
 negate (A (W p q))	=	E (U (negate q) (And (negate p) (negate q)))
+negate (A (G p))	=	E (FF (negate p))
+negate (A (FF p))	=	E (G (negate p))
 -- Exists
 negate (E (X p))	=	A (X (negate p))
 negate (E (U p q))	=	A (W (negate q) (And (negate p) (negate q)))
 negate (E (W p q))	=	A (U (negate q) (And (negate p) (negate q)))
+negate (E (G p))	=	A (FF (negate p))
+negate (E (FF p))	=	A (G (negate p))
 -- Obligation
 negate (O (U p q))	=	P (W (negate q) (And (negate p) (negate q)))
 negate (O (W p q))	=	P (U (negate q) (And (negate p) (negate q)))
