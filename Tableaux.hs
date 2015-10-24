@@ -313,6 +313,16 @@ paths_from_to_aux t n n' visited | otherwise = let succs = (S.toList (succesors 
 														let sons = concat (map (\x -> pathsBFSaux t x (visited')) succs) in
 															map (\xxs -> n:xxs) sons
 
+{-toListBFS :: Tableaux -> [Node]
+toListBFS t = toListBFSaux t S.empty (S.singleton (root t))
+
+toListBFSaux :: Tableaux -> Set Node -> Set Node -> [Node]
+toListBFSaux t visited _ 		 | (nodes t) == visited = []
+toListBFSaux t visited currNodes | otherwise = let visited' = visited S.++ currNodes in
+												let succs = S.unions $ S.map (succesors t) currNodes in
+													let no_duplicated_succs = S.filter (\e -> not $ (S.member e visited')) succs in
+														(S.toList currNodes) ++ (toListBFSaux t visited' no_duplicated_succs)
+-}
 
 {-------------------------
 
