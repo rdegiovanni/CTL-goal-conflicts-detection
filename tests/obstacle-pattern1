@@ -1,0 +1,5 @@
+AG (q && c -> AX(!q));
+
+AG (p && c -> AX(p));
+
+AG (p -> q)

@@ -92,6 +92,13 @@ isNLit = isNegLiteral
 
 isPLit = isProp
 
+isTrue :: Formula -> Bool
+isTrue T = True
+isTrue _ = False
+
+isFalse :: Formula -> Bool
+isFalse F = True
+isFalse _ = False
 
 chopEX :: Formula -> Formula
 chopEX (E (X f)) = f

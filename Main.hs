@@ -51,13 +51,14 @@ run_tableaux = \path -> do {
 }
 
 run_conflicts_detection = \t -> do {
-	conf_set <- return $ conflicts t;
-	if S.null conf_set then 
+	potential_conflict_set <- return $ conflicts t;
+	if S.null potential_conflict_set then 
 			putStrLn ("No WEAK conflict detected.");
 	else
 		do {
 			putStrLn ("WEAK conflict detected.");
-			putStrLn (show conf_set)
+			conflicts <- return $ make_safety_conflicts potential_conflict_set;
+			putStrLn (show conflicts)
 		}
 }
 
