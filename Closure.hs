@@ -13,7 +13,8 @@ import qualified Data.Set as S
 import Data.Set (Set)
 import qualified SetAux as S
 
-import Data.List as L	(sortBy, (\\))
+import Data.List (sortBy, (\\))
+import Data.List as L
 
 import Data.Maybe        (isJust, fromJust, fromMaybe)
 
@@ -91,12 +92,22 @@ process s@(CLSet a b u p n c l) | not $ S.null b = map process_alt alts
 		where
 			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n c (l++(complement alt))) alt
 			alts = break_rule fb
-			complement = \al -> map Dctl.negate ((concat alts) \\ al)
+			complement = \al -> map Dctl.negate (L.map (\sln -> make_and (sln\\al)) (L.delete al alts))
+			--rest = \cn,sln -> make_and (sln \\ cn)
 			fb = fromJust $ S.pick b
 
 process s@(CLSet a b u p n _ l) | otherwise = error "CLSet process: error in pattern matching"
 --process s@(CLSet a b u p n False l) = [] --(trace ("s = " ++ (show s))) error "CLSet process: can't process inconsistent set"
 
+make_and :: [Formula] -> Formula
+make_and [] = T
+make_and [x] = x
+make_and [x,y] = And x y
+make_and (x:y:xs) = let f = make_and xs in
+						if isTrue f then
+							And x y
+						else
+							And x (And y f)
 
 
 cl_impl :: [CLSet] -> [CLSet] -> [CLSet]
