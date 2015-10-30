@@ -1,4 +1,6 @@
-# dctl-synthesis-proto
+# goal-conflicts-detection
+
+The tool computes a set of conflicts for goals specified in CTL.
 
 To use the tool do the following:
 
@@ -8,9 +10,9 @@ To use the tool do the following:
 
 2. Run the tool    
 
-        ./main <path-to-test>
+        ./main <path-to-file>
         
-        The test specs are located in tests/
+        You can find some examples in the folder tests/
         
 3. Convert output to .jpegs
 
