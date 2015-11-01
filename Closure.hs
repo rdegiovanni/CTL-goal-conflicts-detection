@@ -1,6 +1,7 @@
 module Closure (
 	closure,
-	old_closure
+	old_closure,
+	make_and
 	) 
 
 where
