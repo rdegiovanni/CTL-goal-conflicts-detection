@@ -1,7 +1,8 @@
 module Closure (
 	closure,
 	old_closure,
-	make_and
+	make_and,
+	make_or
 	) 
 
 where
@@ -110,6 +111,15 @@ make_and (x:y:xs) = let f = make_and xs in
 						else
 							And x (And y f)
 
+make_or :: [Formula] -> Formula
+make_or [] = T
+make_or [x] = x
+make_or [x,y] = Or x y
+make_or (x:y:xs) = let f = make_or xs in
+						if isFalse f then
+							Or x y
+						else
+							Or x (Or y f)
 
 cl_impl :: [CLSet] -> [CLSet] -> [CLSet]
 cl_impl [] ys = ys

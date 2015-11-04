@@ -39,7 +39,7 @@ data PFormula 	= 	U Formula Formula
 
 instance Show Formula where
 	show (And p q) 	=	show p ++ " && " ++ show q
-	show (Or p q) 	=	show p ++ " || " ++ show q 
+	show (Or p q) 	=	"("++ show p ++ " || " ++ show q ++")"
 	show (If p q)	=	show p ++ " -> " ++ show q 
 	show (Iff p q) 	=	show p ++ " <-> " ++ show q
 	show (Not p)		=	"!" ++ show p
