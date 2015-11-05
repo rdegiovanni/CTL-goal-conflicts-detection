@@ -23,10 +23,10 @@ import Debug.Trace
 
 --Compute conflicts
 conflicts :: Tableaux -> Set Formula
-conflicts t = --if S.null (inconsistent_frontier t) then 
+conflicts t = if S.null (inconsistent_frontier t) then 
 			  	compute_conflicts t (S.singleton (root t)) [] (root t)
-			  --else
-			  --	total_conflicts t
+			  else
+			  	total_conflicts t
 
 total_conflicts :: Tableaux -> Set Formula
 total_conflicts t = let candidate_nodes = S.filter isAnd (last_inconsistent_nodes t) in
@@ -93,7 +93,8 @@ branch_condition :: Tableaux -> Node -> Node -> [Formula]
 branch_condition t n n' = (label t) M.! (n,n')
 
 make_safety_conflicts :: Set Formula -> Set Formula
-make_safety_conflicts c = S.map (\f -> A (FF f)) c
+make_safety_conflicts c = let no_empty_forms = S.filter (\f -> not $ isTrue f) c in
+							S.map (\f -> A (FF f)) no_empty_forms
 
 
 --compute_conflicts visited level_path current
@@ -108,33 +109,34 @@ compute_conflicts t vs lp c = let and_succs = succesors t c in
 									let incons_lc = S.filter inconsistent_node and_succs in
 										--vs' increment visited nodes 
 										let vs' = S.union vs (S.union and_succs or_succs) in
-											--no more nodes to be expanded
-											if (vs'== (nodes t)) then
+											--consistent AND nodes at current level.
+											let cons_lc = and_succs S.\\ incons_lc in
 												--compute potential conflicts: path conditions to reach inconsistent nodes.
-												let incons_paths = (S.map (branch_condition t c) incons_lc) in
-													let reduced_incons_paths = S.toList $ S.map make_and (remove_inconsistencies incons_paths) in
-														S.singleton $ buildPathFormula (lp ++ [make_or reduced_incons_paths])
-											else
-												--consistent AND nodes at current level.
-												let cons_lc = and_succs S.\\ incons_lc in
-													if (S.null cons_lc) then
-														S.empty
-													else
-														--compute successors OR nodes, different from current c.
-														let cons_OR_succs = (S.unions (S.toList (S.map (succesors t) cons_lc) )) S.\\ (S.singleton c) in
-															--filter consistent AND nodes that has at least one successor different from OR-node c.
-															let cons_lc_with_succs = S.filter (\cn -> not $ S.null (S.intersection cons_OR_succs (succesors t cn)) ) cons_lc in 
-																--branch condition to each consistent successor.
-																let cons_path = S.filter (\fs -> not $ inconsistent (S.fromList fs)) (S.map (branch_condition t c) cons_lc_with_succs) in
-																	--reduce formulas removing irrelevant literals. 
-																	let reduced_cons_paths = remove_inconsistencies cons_path in
-																		let cons_forms = make_or $ S.toList (S.map make_and reduced_cons_paths) in
-																			--compute common path to reach these nodes to extend the level path.
-																			let common_cons_path = lp ++ [cons_forms] in
-																				--compute next level conflicts
-																				let next_level_conflicts = S.map (compute_conflicts t vs' common_cons_path) cons_OR_succs in
-																					(trace ("cons_forms = " ++ show cons_forms))  
-																					S.unions $ S.toList next_level_conflicts
+												let incons_paths = S.filter (\fs -> not $ inconsistent (S.fromList fs)) $ S.map (branch_condition t c) incons_lc in
+												let reduced_incons_paths = S.toList $ S.map make_and (remove_inconsistencies incons_paths) in
+												let one_conflict = S.singleton $ buildPathFormula (lp ++ [make_or reduced_incons_paths]) in
+												--no more nodes to be expanded
+												if (vs'== (nodes t) || (S.null cons_lc) ) then
+													one_conflict
+												else
+													--compute successors OR nodes, different from already visited nodes.
+													let cons_OR_succs = (S.unions (S.toList (S.map (succesors t) cons_lc) )) S.\\ vs in
+														--filter consistent AND nodes that has at least one successor different from OR-node c.
+														let cons_lc_with_succs = S.filter (\cn -> not $ S.null (S.intersection cons_OR_succs (succesors t cn)) ) cons_lc in 
+															--branch condition to each consistent successor. Filter inconsistent branches.
+															let cons_path = S.map (\n -> L.union (S.toList $ (S.filter isLiteral (formulas n))) (branch_condition t c n)) cons_lc_with_succs in
+																--reduce formulas removing irrelevant literals. 
+																let reduced_cons_paths = remove_inconsistencies $ S.filter (\fs -> not $ inconsistent (S.fromList fs)) cons_path in
+																	let cons_forms = make_or $ S.toList (S.map make_and reduced_cons_paths) in
+																		--compute common path to reach these nodes to extend the level path.
+																		let common_cons_path = lp ++ [cons_forms] in
+																			--compute next level conflicts
+																			let next_level_conflicts = S.map (compute_conflicts t vs' common_cons_path) cons_OR_succs in
+																				--(trace ("next_level_conflicts = " ++ show next_level_conflicts))  
+																				if (S.null one_conflict) then
+																					S.unions $ (S.toList next_level_conflicts)
+																				else
+																					S.unions $ [one_conflict] ++ (S.toList next_level_conflicts)
 
 
 -- formulas_to_inconsistencies 
@@ -187,11 +189,12 @@ buildPathFormula [x] = x
 buildPathFormula (x:y:xs) = And x (E (X (buildPathFormula (y:xs))))
 
 remove_inconsistencies :: Set [Formula] -> Set [Formula]
-remove_inconsistencies forms = let cons_forms = S.filter (\fs -> not $ inconsistent (S.fromList fs)) forms in
+remove_inconsistencies forms =	let cons_forms = S.filter (\fs -> not $ inconsistent (S.fromList fs)) forms in
 									let all_forms = (foldl L.union []) (S.toList cons_forms) in
 										let reduced_cons_forms = S.map (\lf -> L.filter (\x -> L.notElem (Dctl.negate x) all_forms) lf) cons_forms in
 											--(trace ("reduced_cons_forms = " ++ show reduced_cons_forms)) 
-											reduced_cons_forms
+											S.filter (\l -> not $ L.null l) reduced_cons_forms
+											--let no_empty_forms =  forms in
 
 
 {-generate_one_conflict :: [[Formula]] -> Formula
