@@ -2,7 +2,8 @@ module Closure (
 	closure,
 	old_closure,
 	make_and,
-	make_or
+	make_or,
+	remove_inconsistencies
 	) 
 
 where
@@ -98,6 +99,7 @@ process s@(CLSet a b u p n c l) | not $ S.null b = map process_alt alts
 			--rest = \cn,sln -> make_and (sln \\ cn)
 			fb = fromJust $ S.pick b
 
+
 process s@(CLSet a b u p n _ l) | otherwise = error "CLSet process: error in pattern matching"
 --process s@(CLSet a b u p n False l) = [] --(trace ("s = " ++ (show s))) error "CLSet process: can't process inconsistent set"
 
@@ -120,6 +122,16 @@ make_or (x:y:xs) = let f = make_or xs in
 							Or x y
 						else
 							Or x (Or y f)
+
+remove_inconsistencies :: Set [Formula] -> Set [Formula]
+remove_inconsistencies forms =	let cons_forms = S.filter (\fs -> not $ inconsistent (S.fromList fs)) forms in
+									let all_forms = (foldl L.union []) (S.toList cons_forms) in
+										let reduced_cons_forms = S.map (\lf -> L.filter (\x -> L.notElem (Dctl.negate x) all_forms) lf) cons_forms in
+											--(trace ("forms = " ++ show forms))
+											--(trace ("reduced_cons_forms = " ++ show reduced_cons_forms)) 
+											S.filter (\l -> not $ L.null l) reduced_cons_forms
+											--let no_empty_forms =  forms in
+
 
 cl_impl :: [CLSet] -> [CLSet] -> [CLSet]
 cl_impl [] ys = ys
