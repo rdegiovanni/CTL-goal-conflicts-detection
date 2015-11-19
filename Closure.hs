@@ -2,8 +2,7 @@ module Closure (
 	closure,
 	old_closure,
 	make_and,
-	make_or,
-	remove_inconsistencies
+	make_or
 	) 
 
 where
@@ -93,9 +92,9 @@ process s@(CLSet a b u p n c l) | not $ S.null a = map process_alt alts
 process s@(CLSet a b u p n c l) | not $ S.null b = map process_alt alts
 
 		where
-			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n c (l++(complement alt))) alt
+			process_alt = \alt -> foldl (+++) (CLSet a (b - fb) u p n c l) alt
 			alts = break_rule fb
-			complement = \al -> map Dctl.negate (L.map (\sln -> make_and (sln\\al)) (L.delete al alts))
+			--complement = \al -> map Dctl.negate (L.map (\sln -> make_and (sln\\al)) (L.delete al alts))
 			--rest = \cn,sln -> make_and (sln \\ cn)
 			fb = fromJust $ S.pick b
 
@@ -123,15 +122,6 @@ make_or (x:y:xs) = let f = make_or xs in
 						else
 							Or x (Or y f)
 
-remove_inconsistencies :: Set [Formula] -> Set [Formula]
-remove_inconsistencies forms =	let cons_forms = S.filter (\fs -> not $ inconsistent (S.fromList fs)) forms in
-									let all_forms = (foldl L.union []) (S.toList cons_forms) in
-										let reduced_cons_forms = S.map (\lf -> L.filter (\x -> L.notElem (Dctl.negate x) all_forms) lf) cons_forms in
-											--(trace ("forms = " ++ show forms))
-											--(trace ("reduced_cons_forms = " ++ show reduced_cons_forms)) 
-											S.filter (\l -> not $ L.null l) reduced_cons_forms
-											--let no_empty_forms =  forms in
-
 
 cl_impl :: [CLSet] -> [CLSet] -> [CLSet]
 cl_impl [] ys = ys
@@ -156,8 +146,10 @@ dup :: [CLSet] -> Bool
 dup xs = null [(i, j) | i <- [0 .. length xs P.- 1], j <- [0 .. length xs P.- 1], xs!!i == xs!!j && i /= j] 
 
 
-closure :: Set Formula -> Set (Set Formula, [Formula])
-closure s = S.fromList $ map (\c -> (formulas c, label c)) (cl_impl [make_cls s] [])		
+closure :: Set Formula -> Set [Formula]
+closure s = let clsets = (cl_impl [make_cls s] []) in
+				--(trace ("clsets = " ++ (show clsets)))
+				S.fromList $ map (\c -> S.toList $ formulas c) clsets	
 	--where
 	--	cost = (show $ foldl ((*)) 1 x) ++ " - " ++ (show x) 
 	--	x = map brrk (S.toList s)
