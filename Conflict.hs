@@ -44,30 +44,23 @@ minimality spec ic = let all_comb = S.map (\n -> S.delete n spec) spec in
 
 --Compute potential conflicts
 potential_conflicts :: Tableaux -> Set Formula
-potential_conflicts t = compute_conflicts t (S.singleton (root t)) (inconsistent_frontier t) [] (root t)
+potential_conflicts t = compute_conflicts t (S.singleton (root t)) [] (root t)
 			  
 
 --compute_conflicts visited level_path current
 -- visited: all nodes already visited
 -- level_path: path from the root to the current node
 -- current: current OR-node from which we are going to expand
-compute_conflicts :: Tableaux -> Set Node -> Set Node -> [Formula] -> Node -> Set Formula
-compute_conflicts t vs frontier lp c = let and_succs = succesors t c in
+compute_conflicts :: Tableaux -> Set Node -> [Formula] -> Node -> Set Formula
+compute_conflicts t vs lp c = let and_succs = succesors t c in
 								--OR-nodes successors from and_succs
 								let or_succs = S.unions $ S.toList (S.map (succesors t) and_succs) in
-									--inconsistent AND nodes at current level,
-									let incons_lc = S.filter (\n -> S.member n frontier) and_succs in
-										--consistent AND nodes at current level.
-										let cons_lc = and_succs S.\\ incons_lc in
-										if (S.null cons_lc) then
-											S.empty
-										else
-											--vs' increment visited nodes 
-											let vs' = S.union vs (S.union and_succs or_succs) in
-												--compute potential conflicts: path conditions to reach inconsistent nodes.
-												let incons_paths = S.map (branch_condition t c) cons_lc in
-												--let incons_paths = S.map (\n -> S.toList $ S.filter isLiteral (formulas n)) cons_lc in
-												let reduced_incons_paths =  remove_inconsistencies (S.map (\l -> map Dctl.negate l) incons_paths) in
+									--vs' increment visited nodes 
+									let vs' = S.union vs (S.union and_succs or_succs) in
+										--compute potential conflicts: path conditions to reach inconsistent nodes.
+										--let incons_paths = S.map (branch_condition t c) and_succs in
+										let incons_paths = S.map (\n -> S.toList $ S.filter isLiteral (formulas n)) and_succs in
+											let reduced_incons_paths =  (S.map (\l -> map Dctl.negate l) incons_paths) in
 												let incons_form = (trace ("reduced_incons_paths = " ++ show reduced_incons_paths)) make_and $ S.toList (S.map make_or reduced_incons_paths) in
 												let one_conflict = S.singleton $ buildPathFormula (lp ++ [incons_form]) in
 												--no more nodes to be expanded
@@ -75,48 +68,23 @@ compute_conflicts t vs frontier lp c = let and_succs = succesors t c in
 													one_conflict
 												else
 													--compute successors OR nodes, different from already visited nodes.
-													let cons_OR_succs = (S.unions (S.toList (S.map (succesors t) cons_lc) )) S.\\ vs in
+													let cons_OR_succs = (S.unions (S.toList (S.map (succesors t) and_succs) )) S.\\ vs in
 														--filter consistent AND nodes that has at least one successor different from OR-node c.
-														let cons_lc_with_succs = S.filter (\cn -> not $ S.null (S.intersection cons_OR_succs (succesors t cn)) ) cons_lc in 
+														let filter_and_nodes = \s -> S.intersection and_succs (predecesors t s) in 
 															--branch condition to each consistent successor. Filter inconsistent branches.
-															let cons_path = S.map (branch_condition t c) cons_lc_with_succs in
-															--let cons_path = S.map (\n -> S.toList $ S.filter isLiteral (formulas n)) cons_lc_with_succs in
-																--reduce formulas removing irrelevant literals. 
-																--let reduced_cons_paths = remove_inconsistencies $ S.filter (\fs -> not $ inconsistent (S.fromList fs)) cons_path in
-																let reduced_cons_paths = remove_inconsistencies cons_path in
-																	let cons_forms = make_or $ S.toList (S.map make_and reduced_cons_paths) in
-																		--compute common path to reach these nodes to extend the level path.
-																		let common_cons_path = lp ++ [cons_forms] in
-																			--compute next level conflicts
-																			let next_level_conflicts = S.map (compute_conflicts t vs' frontier common_cons_path) cons_OR_succs in
-																				--(trace ("next_level_conflicts = " ++ show next_level_conflicts))  
-																				if (S.null one_conflict) then
-																					S.unions $ (S.toList next_level_conflicts)
-																				else
-																					S.unions $ [one_conflict] ++ (S.toList next_level_conflicts)
-
-
-
--- last nodes (AND , OR) in the frontier with all inconsistent successors
-inconsistent_frontier :: Tableaux -> Set Node
-inconsistent_frontier t = let inc_nodes = S.filter inconsistent_node (nodes t) in
-							last_inconsistent_nodes t inc_nodes
-
-last_inconsistent_nodes :: Tableaux -> Set Node -> Set Node
-last_inconsistent_nodes t visited = let not_visited = S.difference (nodes t) visited  in
-											--(trace ("not_visited = " ++ show (S.size not_visited)))
-										-- add AND-nodes with at least one son inconsistent
-										let and_not_visited = S.filter isAnd not_visited in
-										let and_in_the_frontier =  S.filter (\n -> S.some (\e -> S.member e visited) (succesors t n)) and_not_visited in
-											-- add OR-nodes with all sons inconsistent
-											let or_not_visited = S.filter isOr not_visited in
-											let or_in_the_frontier =  S.filter (\n -> S.all (\e -> S.member e visited) (succesors t n)) or_not_visited in
-												if (S.null and_in_the_frontier && S.null or_in_the_frontier) then
-													visited
-												else
-													let visited' = S.union visited (S.union and_in_the_frontier or_in_the_frontier) in
-														last_inconsistent_nodes t visited'
-
+															--let cons_path = S.map (branch_condition t c) cons_lc_with_succs in
+															let cons_path = \s -> S.map (\n -> S.toList $ S.filter isLiteral (formulas n)) (filter_and_nodes s) in
+																--reduce formulas removing irrelevant literals. 	
+																let cons_forms = \s -> make_or $ S.toList ( S.map make_and (cons_path s)) in
+																	--compute common path to reach these nodes to extend the level path.
+																	let common_cons_path = \s -> lp ++ [cons_forms s] in
+																		--compute next level conflicts
+																		let next_level_conflicts = S.map (\s -> compute_conflicts t vs' (common_cons_path s) s) cons_OR_succs in
+																			--(trace ("next_level_conflicts = " ++ show next_level_conflicts))  
+																			if (S.null one_conflict) then
+																				S.unions $ (S.toList next_level_conflicts)
+																			else
+																				S.unions $ [one_conflict] ++ (S.toList next_level_conflicts)
 
 
 --branch condition in one step

@@ -72,7 +72,8 @@ frontier t = nodes t S.\\ (R.dom . rel) t
 
 
 blocks :: Node -> Set (Node, [Formula])
-blocks (OrNode s) = let forms = (closure s) in
+blocks (OrNode s) = S.map (\f -> (AndNode (S.fromList f), [])) $ closure s 
+			{-let forms = (closure s) in
 						let lit_forms =  S.map (L.filter isLiteral) forms in
 							let split_forms = \lf -> [[x] | x <- lf] in
 							let branch_cond = \f ->  S.toList $ S.map make_and $ remove_inconsistencies (S.union (S.fromList $ split_forms f) (S.map (L.map Dctl.negate) (S.delete f lit_forms))) in
@@ -81,7 +82,7 @@ blocks (OrNode s) = let forms = (closure s) in
 								--(trace ("lit_forms = " ++ (show lit_forms)))
 								--(trace ("and_nodes = " ++ (show and_nodes)))
 								and_nodes
-
+			-}
 
 tiles :: Node -> Set Node
 tiles (AndNode s) = let ex = S.map chopEX (S.filter isEX s) in
@@ -261,7 +262,7 @@ Labelling functions
 
 --------------------------}
 
-remove_inconsistencies :: Set [Formula] -> Set [Formula]
+{-remove_inconsistencies :: Set [Formula] -> Set [Formula]
 remove_inconsistencies forms = 	let noTautologies = remove_tautologies forms in
 									let dsforms = disjunctive_syllogism noTautologies in
 										let alforms = absorption_law dsforms in
@@ -306,7 +307,7 @@ absorption_law forms = let unitary_lists = S.filter (\l -> (L.length l) == 1) fo
 											--(trace ("cons_list = " ++ show cons_list)) 
 											cons_forms
 
-
+-}
 {-------------------------
 
 

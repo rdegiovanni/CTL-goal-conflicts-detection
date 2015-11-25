@@ -41,7 +41,7 @@ run_tableaux = \path -> do {
 			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2);
 
 			putStr ("Computing conflicts .. ");
-			run_conflicts_detection spec t;
+			run_conflicts_detection spec t2;
 			--return ()
 		}
 	else
