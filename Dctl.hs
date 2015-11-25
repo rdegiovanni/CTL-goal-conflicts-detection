@@ -36,6 +36,8 @@ data PFormula 	= 	U Formula Formula
 				|	FF Formula
 				deriving (Eq,Ord)
 
+				
+
 
 instance Show Formula where
 	show (And p q) 	=	show p ++ " && " ++ show q

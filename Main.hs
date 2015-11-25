@@ -41,7 +41,7 @@ run_tableaux = \path -> do {
 			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2);
 
 			putStr ("Computing conflicts .. ");
-			run_conflicts_detection t;
+			run_conflicts_detection spec t;
 			--return ()
 		}
 	else
@@ -50,15 +50,18 @@ run_tableaux = \path -> do {
 	return t
 }
 
-run_conflicts_detection = \t -> do {
-	potential_conflict_set <- return $ conflicts t;
+run_conflicts_detection = \spec -> \t -> do {
+	potential_conflict_set <- return $ potential_conflicts t;
 	if S.null potential_conflict_set then 
 			putStrLn ("No WEAK conflict detected.");
 	else
 		do {
-			putStrLn ("WEAK conflict detected.");
-			conflicts <- return $ make_safety_conflicts potential_conflict_set;
-			putStrLn (show conflicts)
+			putStrLn ("Potential conflicts detected:");
+			potential_conflicts_forms <- return $ make_safety_conflicts potential_conflict_set;
+			putStrLn (show potential_conflicts_forms)
+			--putStrLn ("Computing WEAK conflicts...");
+			--weak_conflicts_set <- return $ weak_conflicts spec potential_conflicts_forms;
+			--putStrLn (show weak_conflicts_set)
 		}
 }
 

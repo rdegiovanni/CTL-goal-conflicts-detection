@@ -29,7 +29,6 @@ import qualified Model as Model
 import Model (Model)
 
 
-
 -- NODE
 --
 --
@@ -77,10 +76,10 @@ blocks (OrNode s) = let forms = (closure s) in
 						let lit_forms =  S.map (L.filter isLiteral) forms in
 							let split_forms = \lf -> [[x] | x <- lf] in
 							let branch_cond = \f ->  S.toList $ S.map make_and $ remove_inconsistencies (S.union (S.fromList $ split_forms f) (S.map (L.map Dctl.negate) (S.delete f lit_forms))) in
-								let final_branch = \f -> (branch_cond f) \\ f in
-								let and_nodes =	S.map (\f -> (AndNode (S.fromList f), final_branch (L.filter isLiteral f))) forms in
+								--let final_branch = \f -> (branch_cond f) \\ f in
+								let and_nodes =	S.map (\f -> (AndNode (S.fromList f), branch_cond (L.filter isLiteral f))) forms in
 								--(trace ("lit_forms = " ++ (show lit_forms)))
-								(trace ("and_nodes = " ++ (show and_nodes)))
+								--(trace ("and_nodes = " ++ (show and_nodes)))
 								and_nodes
 
 
@@ -263,13 +262,13 @@ Labelling functions
 --------------------------}
 
 remove_inconsistencies :: Set [Formula] -> Set [Formula]
-remove_inconsistencies forms =	let noTautologies = remove_tautologies forms in
+remove_inconsistencies forms = 	let noTautologies = remove_tautologies forms in
 									let dsforms = disjunctive_syllogism noTautologies in
 										let alforms = absorption_law dsforms in
-											(trace ("forms = " ++ show forms)) 
-											(trace ("noTautologies = " ++ show noTautologies)) 
-											(trace ("dsforms = " ++ show dsforms)) 
-											(trace ("alforms = " ++ show alforms)) 
+											--(trace ("forms = " ++ show forms)) 
+											--(trace ("noTautologies = " ++ show noTautologies)) 
+											--(trace ("dsforms = " ++ show dsforms)) 
+											--(trace ("alforms = " ++ show alforms)) 
 											remove_contradictions alforms
 											
 
@@ -304,7 +303,7 @@ absorption_law forms = let unitary_lists = S.filter (\l -> (L.length l) == 1) fo
 								let to_remove_list = S.filter (L.any (\x -> L.elem x unitary_forms)) (forms S.\\ unitary_lists)  in
 									let cons_list = (forms S.\\ to_remove_list) in
 										let cons_forms = S.map (\l -> L.filter (\x -> L.notElem (Dctl.negate x) l) l) cons_list in
-											(trace ("cons_list = " ++ show cons_list)) 
+											--(trace ("cons_list = " ++ show cons_list)) 
 											cons_forms
 
 
