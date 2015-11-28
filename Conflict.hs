@@ -19,6 +19,14 @@ import Data.Map (Map)
 import Data.List	(sortBy, (\\))
 import Data.List as L
 import Data.Ord
+import Data.Maybe
+import Data.Either as E
+--import Data.Boolean as B
+import Control.Monad.State.Strict
+import Data.HBDD.ROBDDContext
+import Data.HBDD.ROBDDState
+import Data.HBDD.ROBDD as R
+import Data.HBDD.Operations as Op hiding (not)
 
 
 import Debug.Trace
@@ -59,9 +67,15 @@ compute_conflicts t vs lp c = let and_succs = succesors t c in
 									let vs' = S.union vs (S.union and_succs or_succs) in
 										--compute potential conflicts: path conditions to reach inconsistent nodes.
 										--let incons_paths = S.map (branch_condition t c) and_succs in
-										let incons_paths = S.map (\n -> S.toList $ S.filter isLiteral (formulas n)) and_succs in
-											let reduced_incons_paths =  (S.map (\l -> map Dctl.negate l) incons_paths) in
-												let incons_form = (trace ("reduced_incons_paths = " ++ show reduced_incons_paths)) make_and $ S.toList (S.map make_or reduced_incons_paths) in
+										let incons_paths = S.map (\n -> S.filter isLiteral (formulas n)) and_succs in
+											let negated_incons_paths =  (S.map (\l -> S.map Dctl.negate l) incons_paths) in
+											  let incons_form = make_and $ S.toList (S.map (\l -> make_or $ S.toList l) negated_incons_paths) in
+											  --let bdd_form = reduce_formula incons_form in
+											--	let reduced_incons_paths = remove_inconsistencies incons_form c in
+											--let negated_incons_paths =  S.map apply_BDD_neg incons_paths in
+											--	let or_forms = S.map apply_BDD_or negated_incons_paths in 
+											--	let incons_form = apply_BDD_and or_forms in
+												--let incons_form = B.reduce and_forms (make_and$ S.toList (S.filter isLiteral (formulas c))) in
 												let one_conflict = S.singleton $ buildPathFormula (lp ++ [incons_form]) in
 												--no more nodes to be expanded
 												if (vs'== (nodes t)) then
@@ -86,6 +100,62 @@ compute_conflicts t vs lp c = let and_succs = succesors t c in
 																			else
 																				S.unions $ [one_conflict] ++ (S.toList next_level_conflicts)
 
+reduce_formula :: Formula -> Formula
+reduce_formula f = let (bdd,context) = runState (toBDD f) mkContext in
+					let sat = getSat context bdd in
+						(trace ("bdd = " ++ show bdd))
+						(trace ("satCount = " ++ show (getSatList context bdd)))
+						toFormula sat
+						--if (isNothing sat) then
+						--	F
+						--else if (isJust sat) then
+						--		T
+						--	else
+						--		toFormula sat
+
+toFormula :: Maybe [Either Formula Formula] -> Formula
+toFormula Nothing = F
+toFormula (Just []) = T
+toFormula (Just f) = let pos = E.rights f in
+					let negs = map Dctl.negate (E.lefts f) in
+						make_and (pos ++ negs)
+--toFormula ((Left f):xs) = And f (toFormula xs)
+--toFormula ((Right f):xs) = And (Dctl.negate f) (toFormula xs)
+
+toBDD :: Formula -> ROBDDState Formula
+toBDD f@(Prop p) = singletonC f
+toBDD f@(Not p) = notC (toBDD p)
+toBDD f@(And p q) = andC (toBDD p) (toBDD q)
+toBDD f@(Or p q) = orC (toBDD p) (toBDD q)
+toBDD f@(If p q) = impC (toBDD p) (toBDD q)
+toBDD f@(Iff p q) = equivC (toBDD p) (toBDD q)
+toBDD T = singletonC T
+toBDD F = singletonC F
+
+{-apply_BDD_and :: [Formula] -> Formula
+apply_BDD_and [] = B.true
+apply_BDD_and [x] = x
+apply_BDD_and [x,y] = (B./\) x y
+apply_BDD_and (x:y:xs) = let asd = apply_BDD_and xs in
+						 	x B./\ asd
+
+apply_BDD_or :: Set Formula -> Formula
+apply_BDD_or forms = if S.null forms then
+						B.false
+					  else
+					  	(S.foldl B.\/ B.false) forms
+
+-}
+
+--remove_inconsistencies :: Formula -> Node -> Formula
+--remove_inconsistencies f c = let g = make_and $ S.toList $ S.filter isLiteral (formulas c) in
+--								B.reduce f g
+	--let unitary_lists = S.filter (\l -> (L.length l) == 1) forms in
+--								let others_lists = forms \\ unitary_lists in
+--									let all_unary_forms = (S.foldl S.union S.empty) unitary_lists in
+--									let 
+			
+
 
 --branch condition in one step
 branch_condition :: Tableaux -> Node -> Node -> [Formula]
@@ -99,8 +169,8 @@ make_safety_conflicts c = let no_empty_forms = S.filter (\f -> not $ isTrue f) c
 
 buildPathFormula :: [Formula] -> Formula
 buildPathFormula [] = T
-buildPathFormula [x] = x
-buildPathFormula (x:y:xs) = And x (E (X (buildPathFormula (y:xs))))
+buildPathFormula [x] = reduce_formula x
+buildPathFormula (x:y:xs) = And (reduce_formula x) (E (X (buildPathFormula (y:xs))))
 
 
 
