@@ -4,7 +4,7 @@ import Parser
 import Dctl
 import Closure
 import Tableaux as T
---import BDD
+import BDD as B
 
 import qualified Data.Set as S
 import Data.Set (Set)
@@ -19,14 +19,14 @@ import Data.Map (Map)
 import Data.List	(sortBy, (\\))
 import Data.List as L
 import Data.Ord
-import Data.Maybe
-import Data.Either as E
---import Data.Boolean as B
-import Control.Monad.State.Strict
-import Data.HBDD.ROBDDContext
-import Data.HBDD.ROBDDState
-import Data.HBDD.ROBDD as R
-import Data.HBDD.Operations as Op hiding (not)
+--import Data.Maybe
+--import Data.Either as E
+----import Data.Boolean as B
+--import Control.Monad.State.Strict
+--import Data.HBDD.ROBDDContext
+--import Data.HBDD.ROBDDState
+--import Data.HBDD.ROBDD as R
+--import Data.HBDD.Operations as Op hiding (not)
 
 
 import Debug.Trace
@@ -100,7 +100,7 @@ compute_conflicts t vs lp c = let and_succs = succesors t c in
 																			else
 																				S.unions $ [one_conflict] ++ (S.toList next_level_conflicts)
 
-reduce_formula :: Formula -> Formula
+{-reduce_formula :: Formula -> Formula
 reduce_formula f = let (bdd,context) = runState (toBDD f) mkContext in
 					let sat = getSat context bdd in
 						(trace ("bdd = " ++ show bdd))
@@ -131,7 +131,7 @@ toBDD f@(If p q) = impC (toBDD p) (toBDD q)
 toBDD f@(Iff p q) = equivC (toBDD p) (toBDD q)
 toBDD T = singletonC T
 toBDD F = singletonC F
-
+-}
 {-apply_BDD_and :: [Formula] -> Formula
 apply_BDD_and [] = B.true
 apply_BDD_and [x] = x
@@ -159,7 +159,7 @@ apply_BDD_or forms = if S.null forms then
 
 --branch condition in one step
 branch_condition :: Tableaux -> Node -> Node -> [Formula]
-branch_condition t n n' = (label t) M.! (n,n')
+branch_condition t n n' = [(label t) M.! (n,n')]
 
 make_safety_conflicts :: Set Formula -> Set Formula
 make_safety_conflicts c = let no_empty_forms = S.filter (\f -> not $ isTrue f) c in
@@ -169,8 +169,8 @@ make_safety_conflicts c = let no_empty_forms = S.filter (\f -> not $ isTrue f) c
 
 buildPathFormula :: [Formula] -> Formula
 buildPathFormula [] = T
-buildPathFormula [x] = reduce_formula x
-buildPathFormula (x:y:xs) = And (reduce_formula x) (E (X (buildPathFormula (y:xs))))
+buildPathFormula [x] = x
+buildPathFormula (x:y:xs) = And (x) (E (X (buildPathFormula (y:xs))))
 
 
 

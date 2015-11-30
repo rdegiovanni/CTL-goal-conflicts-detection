@@ -1,6 +1,7 @@
 module Tableaux where
 
 import Parser
+import BDD as B
 
 import qualified Data.Set as S
 import Data.Set (Set)
@@ -59,7 +60,7 @@ data Tableaux = Tableaux {
 					root :: Node, 						-- root  
 					nodes :: Set Node,					-- nodes 
 					rel :: Relation Node Node,			-- relation
-					label :: Map (Node,Node) [Formula] 	-- branch condition
+					label :: Map (Node,Node) Formula 	-- branch condition
 				} deriving (Show, Eq)
 
 
@@ -71,18 +72,20 @@ frontier :: Tableaux -> Set Node
 frontier t = nodes t S.\\ (R.dom . rel) t
 
 
-blocks :: Node -> Set (Node, [Formula])
-blocks (OrNode s) = S.map (\f -> (AndNode (S.fromList f), [])) $ closure s 
-			{-let forms = (closure s) in
-						let lit_forms =  S.map (L.filter isLiteral) forms in
+blocks :: Node -> Set (Node, Formula)
+blocks (OrNode s) = --S.map (\f -> (AndNode (S.fromList f), Dctl.T)) $ closure s 
+			let forms = (closure s) in
+						let lit_forms = S.map (L.filter isLiteral) forms in
+						let cons_lit_forms = S.filter (\l -> not $ inconsistent (S.fromList l)) lit_forms in
 							let split_forms = \lf -> [[x] | x <- lf] in
-							let branch_cond = \f ->  S.toList $ S.map make_and $ remove_inconsistencies (S.union (S.fromList $ split_forms f) (S.map (L.map Dctl.negate) (S.delete f lit_forms))) in
+							let branch_cond = \f ->  B.reduce_CNF_formula (S.union (S.singleton [make_and f]) (S.map (L.map Dctl.negate) (S.delete f cons_lit_forms))) in
+							--let branch_cond = \f ->  B.reduce_CNF_formula (S.map (L.map Dctl.negate) (S.delete f cons_lit_forms)) (make_and f) in
 								--let final_branch = \f -> (branch_cond f) \\ f in
 								let and_nodes =	S.map (\f -> (AndNode (S.fromList f), branch_cond (L.filter isLiteral f))) forms in
 								--(trace ("lit_forms = " ++ (show lit_forms)))
 								--(trace ("and_nodes = " ++ (show and_nodes)))
 								and_nodes
-			-}
+			
 
 tiles :: Node -> Set Node
 tiles (AndNode s) = let ex = S.map chopEX (S.filter isEX s) in
@@ -715,7 +718,7 @@ renderNode num n@(AndNode s) = let label = foldr (+++) "" (order_flas s) in
 renderArcs :: Map Node Int -> Tableaux -> String
 renderArcs num t@(Tableaux r nodes rel l) = foldl (+++) "" (map (uncurry (renderOneArc num l)) (R.toList rel))
 
-renderOneArc :: Map Node Int -> Map (Node,Node) [Formula] -> Node -> Node -> String
+renderOneArc :: Map Node Int -> Map (Node,Node) Formula -> Node -> Node -> String
 renderOneArc num l n@(OrNode s) n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n') ++ "[label=\"" ++ (show (l M.! (n,n'))) ++ "\"]"
 renderOneArc num l n n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n')
 

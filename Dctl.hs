@@ -1,7 +1,5 @@
 module Dctl where
 
-
-
 import qualified Data.Set as S
 import Data.Set (Set)
 import qualified SetAux as S
@@ -9,9 +7,6 @@ import qualified SetAux as S
 import Prelude hiding (break, negate)
 
 import Debug.Trace
-
---import Data.Boolean as B
---import Data.HBDD.ROBDDState
 
 -- dCTL Formulas 
 data Formula = 	And Formula Formula
@@ -38,45 +33,7 @@ data PFormula 	= 	U Formula Formula
 				|	FF Formula
 				deriving (Eq,Ord)
 
-{-
---instance for BDD variables	
-instance BooleanVariable Formula where
-	bvar f = Prop f
-	unbvar f = show f 
 
-	--instance for BDD operations
-instance Boolean Formula where
-	false = F
-	true = T
-	(/\) f1 f2 = And f1 f2
-	neg f = negate f
-
-instance QBF Formula where
-instance Substitution Formula where
---instance for BDD manipulations
-instance BDDOps Formula where
---	reduce f g = f /\ g
-	reduce T g = g
-	reduce F _ = F
-	reduce _ F = F
-	reduce f@(And F _) g = g
-	reduce f@(And _ F) g = g
-	reduce f@(And T f) g = reduce f g
-	reduce f@(And f T) g = reduce f g
-	reduce f@(And f1 f2) g =if (f1 == g) 
-							then reduce f2 g 
-							else if (f2 == g) 
-								 then reduce f1 g
-								 else And (reduce f1 g) (reduce f2 g) 
-	reduce f@(Or f1 f2) g = if (f1 == g || f2 == g) 
-							then g
-							else Or (reduce f1 g) (reduce f2 g) 
-	reduce f g = if (f == g)
-				 then g
-				 else if (negate f == g)
-				 	  then F
-				 	  else f
--}
 
 instance Show Formula where
 	show (And p q) 	=	show p ++ " && " ++ show q
