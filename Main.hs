@@ -58,10 +58,10 @@ run_conflicts_detection = \spec -> \t -> do {
 		do {
 			putStrLn ("Potential conflicts detected:");
 			potential_conflicts_forms <- return $ make_safety_conflicts potential_conflict_set;
-			putStrLn (show potential_conflicts_forms)
-			--putStrLn ("Computing WEAK conflicts...");
-			--weak_conflicts_set <- return $ weak_conflicts spec potential_conflicts_forms;
-			--putStrLn (show weak_conflicts_set)
+			putStrLn (show potential_conflicts_forms);
+			putStrLn ("Computing WEAK conflicts...");
+			weak_conflicts_set <- return $ weak_conflicts spec potential_conflicts_forms;
+			putStrLn (show weak_conflicts_set)
 		}
 }
 

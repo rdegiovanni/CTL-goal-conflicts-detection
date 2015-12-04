@@ -76,11 +76,8 @@ blocks :: Node -> Set (Node, Formula)
 blocks (OrNode s) = --S.map (\f -> (AndNode (S.fromList f), Dctl.T)) $ closure s 
 			let forms = (closure s) in
 						let lit_forms = S.map (L.filter isLiteral) forms in
-						let cons_lit_forms = S.filter (\l -> not $ inconsistent (S.fromList l)) lit_forms in
-							let split_forms = \lf -> [[x] | x <- lf] in
-							let branch_cond = \f ->  B.reduce_CNF_formula (S.union (S.singleton [make_and f]) (S.map (L.map Dctl.negate) (S.delete f cons_lit_forms))) in
-							--let branch_cond = \f ->  B.reduce_CNF_formula (S.map (L.map Dctl.negate) (S.delete f cons_lit_forms)) (make_and f) in
-								--let final_branch = \f -> (branch_cond f) \\ f in
+						--let cons_lit_forms = S.filter (\l -> not $ inconsistent (S.fromList l)) lit_forms in
+							let branch_cond = \f ->  B.reduce_CNF_formula (S.union (S.singleton [make_and f]) (S.map (L.map Dctl.negate) (S.delete f lit_forms))) in
 								let and_nodes =	S.map (\f -> (AndNode (S.fromList f), branch_cond (L.filter isLiteral f))) forms in
 								--(trace ("lit_forms = " ++ (show lit_forms)))
 								--(trace ("and_nodes = " ++ (show and_nodes)))
@@ -259,58 +256,6 @@ refine_tableaux t = let t' = deletion_rules t in
 					if t' == t then t else deletion_rules t'
 
 
-{-------------------------
-
-Labelling functions
-
---------------------------}
-
-{-remove_inconsistencies :: Set [Formula] -> Set [Formula]
-remove_inconsistencies forms = 	let noTautologies = remove_tautologies forms in
-									let dsforms = disjunctive_syllogism noTautologies in
-										let alforms = absorption_law dsforms in
-											--(trace ("forms = " ++ show forms)) 
-											--(trace ("noTautologies = " ++ show noTautologies)) 
-											--(trace ("dsforms = " ++ show dsforms)) 
-											--(trace ("alforms = " ++ show alforms)) 
-											remove_contradictions alforms
-											
-
-remove_tautologies :: Set [Formula] -> Set [Formula]
-remove_tautologies forms = let isTautology = \l -> L.any (\x -> L.elem (Dctl.negate x) l) l in
-								let to_remove_list = S.filter isTautology forms in
-									forms S.\\ to_remove_list 
-
-remove_contradictions :: Set [Formula] -> Set [Formula]
-remove_contradictions forms = let unitary_lists = S.filter (\l -> (L.length l) == 1) forms in
-								let all_unary_forms = (foldl L.union []) (S.toList unitary_lists) in
-								let filter_contracictions = \l -> L.filter (\x -> L.notElem (Dctl.negate x) all_unary_forms) l in
-									let noContracdictions = S.map filter_contracictions forms in
-									let no_null_forms = S.filter (\l -> not $ L.null l) noContracdictions in
-										no_null_forms
-
-disjunctive_syllogism :: Set [Formula] -> Set [Formula]
-disjunctive_syllogism forms = let unitary_lists = S.filter (\l -> (L.length l) == 1) forms in
-									let unitary_forms = (foldl L.union []) (S.toList unitary_lists) in
-										let reduced_forms = S.map (\lf -> L.filter (\x -> L.notElem (Dctl.negate x) unitary_forms) lf) (forms S.\\ unitary_lists)  in
-											let result_forms = S.union unitary_lists reduced_forms in 
-											if (forms == result_forms) then
-												forms
-											else
-												let no_null_forms = S.filter (\l -> not $ L.null l) result_forms in
-													disjunctive_syllogism no_null_forms
-
-
-absorption_law :: Set [Formula] -> Set [Formula]
-absorption_law forms = let unitary_lists = S.filter (\l -> (L.length l) == 1) forms in
-							let unitary_forms =  (foldl L.union []) (S.toList unitary_lists) in
-								let to_remove_list = S.filter (L.any (\x -> L.elem x unitary_forms)) (forms S.\\ unitary_lists)  in
-									let cons_list = (forms S.\\ to_remove_list) in
-										let cons_forms = S.map (\l -> L.filter (\x -> L.notElem (Dctl.negate x) l) l) cons_list in
-											--(trace ("cons_list = " ++ show cons_list)) 
-											cons_forms
-
--}
 {-------------------------
 
 

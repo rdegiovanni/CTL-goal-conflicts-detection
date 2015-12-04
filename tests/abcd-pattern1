@@ -1,0 +1,5 @@
+AG (b -> !d);
+
+AG (a -> AX(b));
+
+AG (c -> AX(d))

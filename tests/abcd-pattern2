@@ -1,3 +1,5 @@
+AG (a -> AX(b));
+
 AG (c -> d);
 
 AG (b -> !d)
