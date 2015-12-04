@@ -1,7 +1,0 @@
-(!trainstopped && !stopsignal && signalvisible && driverresponsive);
-
-AG (AX(trainstopped) -> driverresponsive);
-
-AG (AX(trainstopped) -> signalvisible);
-
-AG (stopsignal -> AX(trainstopped)) 
