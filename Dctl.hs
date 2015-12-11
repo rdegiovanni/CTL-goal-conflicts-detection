@@ -75,6 +75,20 @@ isAU :: Formula -> Bool
 isAU (A(U _ _)) = True
 isAU _ = False
 
+isF :: Formula -> Bool
+isF (A(U T _)) = True
+isF (E(U T _)) = True
+isF (A(FF _)) = True
+isF (E(FF _)) = True
+isF _ = False
+
+isG :: Formula -> Bool
+isG (A(W _ F)) = True
+isG (E(W _ F)) = True
+isG (A(G _)) = True
+isG (E(G _)) = True
+isG _ = False
+
 isProp :: Formula -> Bool
 isProp (Prop _) = True
 isProp _ = False
@@ -105,6 +119,18 @@ chopEX f = f
 chopAX :: Formula -> Formula
 chopAX (A (X f)) = f
 chopAX f = f 
+
+chopF :: Formula -> Formula
+chopF (A(U T f)) = f
+chopF (E(U T f)) = f
+chopF (A(FF f)) = f
+chopF (E(FF f)) = f
+
+chopG :: Formula -> Formula
+chopG (A(W f F)) = f
+chopG (E(W f F)) = f
+chopG (A(G f)) = f
+chopG (E(G f)) = f
 
 
 
@@ -143,6 +169,7 @@ break_rule :: Formula -> [[Formula]]
 -- Propositional
 break_rule (Or p q)		=	[[p],[q]]
 break_rule (And p q)	= 	[[p,q]]
+--break_rule (Not p)		=	break_rule (negate p)
 break_rule (If p q)		=	[[negate p],[q]]
 break_rule (Iff p q)	=	[[negate p, negate q],[p,q]]
 -- All

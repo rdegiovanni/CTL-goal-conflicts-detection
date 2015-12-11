@@ -7,20 +7,26 @@ import qualified Data.Set as S
 import Data.Set (Set)
 import qualified SetAux as S
 
+import Data.List	(sortBy, (\\))
+import Data.List as L
+
+import Debug.Trace
 
 parseFormula :: String -> Formula
 parseFormula s = fst (head (papply pFormula s))
 
 parseSpecification :: String -> Set Formula
-parseSpecification s = case papply pSpec s of
+parseSpecification s = 	case papply pSpec (remove_comments s) of
 							[(x,[])] -> S.fromList x
-							[(_,s)] -> error ("Parser error - unable to parse: " ++ s)
+							[(_,str)] -> error ("Parser error - unable to parse: " ++ str)
 							z -> error ("Parser error: " ++ s)
 
-
+remove_comments :: String -> String
+remove_comments s = let splitted = L.lines s in
+						let no_comments = L.filter (\l -> not $ L.isPrefixOf "--" l) splitted in
+							foldl (++) "" no_comments
 pSpec :: Parser [Formula]
 pSpec = pFormula `sepby1` (symbol ";")
-
 
 -- Formula parsers
 
@@ -82,7 +88,7 @@ pW = do { f1 <- pLowLevel; symbol "W"; f2 <- pLowLevel; return (W f1 f2) }
 
 pG = do { f1 <- symbol "G"; f <- pLowLevel; return (G f) }
 
-pF = do { f1 <- symbol "F"; f <- pLowLevel; return (FF f) }
+pF = do { f1 <- symbol "F"; f <- pLowLevel; return (U T f) }
 
 
 

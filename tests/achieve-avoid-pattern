@@ -1,0 +1,5 @@
+AG (p -> (AF q));
+
+AG (r -> AG(!s));
+
+AG (q -> s)

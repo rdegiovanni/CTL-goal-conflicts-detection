@@ -41,7 +41,7 @@ robdd_to_formula c (ROBDDRef l root r _ _) = robdd_to_formula c $ lookupUnsafe (
 
 toBDD :: Formula -> ROBDDState Formula
 toBDD T = return One
-toBDD F = return Zero --mkNode (mkContext F) Zero F Zero
+toBDD F = return Zero
 toBDD f@(Prop p)	= singletonC f
 toBDD f@(Not p) 	= notC (toBDD p)
 toBDD f@(And p q) 	= andC (toBDD p) (toBDD q)

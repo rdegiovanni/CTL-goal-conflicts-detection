@@ -182,7 +182,7 @@ spaces            :: Parser ()
 spaces             = do {many1 (sat isSpace); return ()}
 
 comment           :: Parser ()
-comment            = do {string "--"; many (sat (\x -> x /= '\n')); return ()}
+comment            = do {char '#'; many (sat (\x -> x /= '\n')); return ()}
 
 junk              :: Parser ()
 junk               = do {many (spaces); return ()}

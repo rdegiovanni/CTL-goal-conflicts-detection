@@ -1,0 +1,3 @@
+AG (p -> (A True U q));
+
+AG (q -> p)

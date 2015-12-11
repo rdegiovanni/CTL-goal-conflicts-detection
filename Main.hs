@@ -30,18 +30,18 @@ run_tableaux = \path -> do {
 	putStr ("Tableaux .. ");
 	t <- return $ do_tableaux $ make_tableaux spec;
 	putStrLn ("done.");
-	writeFile "output/tableaux_raw.dot" (tab2dot t);
+	writeFile "output/tableaux_raw.dot" (tag2dot t);
 	putStr ("Refining tableaux .. ");
 	t2 <- return $ refine_tableaux t;
 	putStrLn ("done.");
 	if not $ S.null $ nodes t2 then 
 		do {
-			writeFile "output/tableaux.dot" (tab2dot t2);
+			writeFile "output/tableaux.dot" (tag2dot t2);
 			putStrLn ("Extracting model.");
 			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2);
 
-			putStr ("Computing conflicts .. ");
-			run_conflicts_detection spec t2;
+			--putStrLn ("Computing conflicts ...");
+			run_conflicts_detection spec t t2;
 			--return ()
 		}
 	else
@@ -50,17 +50,16 @@ run_tableaux = \path -> do {
 	return t
 }
 
-run_conflicts_detection = \spec -> \t -> do {
-	potential_conflict_set <- return $ potential_conflicts t;
+run_conflicts_detection = \spec -> \t -> \t2 -> do {
+	potential_conflict_set <- potential_conflicts spec t t2;
 	if S.null potential_conflict_set then 
 			putStrLn ("No WEAK conflict detected.");
 	else
 		do {
 			putStrLn ("Potential conflicts detected:");
-			potential_conflicts_forms <- return $ make_safety_conflicts potential_conflict_set;
-			putStrLn (show potential_conflicts_forms);
-			putStrLn ("Computing WEAK conflicts...");
-			weak_conflicts_set <- return $ weak_conflicts spec potential_conflicts_forms;
+			putStrLn (show potential_conflict_set);
+			putStrLn ("Filtering WEAK conflicts...");
+			weak_conflicts_set <- return $ weak_conflicts spec potential_conflict_set;
 			putStrLn (show weak_conflicts_set)
 		}
 }

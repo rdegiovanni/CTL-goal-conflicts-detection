@@ -73,15 +73,15 @@ frontier t = nodes t S.\\ (R.dom . rel) t
 
 
 blocks :: Node -> Set (Node, Formula)
-blocks (OrNode s) = --S.map (\f -> (AndNode (S.fromList f), Dctl.T)) $ closure s 
-			let forms = (closure s) in
-						let lit_forms = S.map (L.filter isLiteral) forms in
-						--let cons_lit_forms = S.filter (\l -> not $ inconsistent (S.fromList l)) lit_forms in
-							let branch_cond = \f ->  B.reduce_CNF_formula (S.union (S.singleton [make_and f]) (S.map (L.map Dctl.negate) (S.delete f lit_forms))) in
-								let and_nodes =	S.map (\f -> (AndNode (S.fromList f), branch_cond (L.filter isLiteral f))) forms in
-								--(trace ("lit_forms = " ++ (show lit_forms)))
-								--(trace ("and_nodes = " ++ (show and_nodes)))
-								and_nodes
+blocks (OrNode s) = S.map (\f -> (AndNode (S.fromList f), Dctl.T)) $ closure s 
+			--let forms = (closure s) in
+			--			let lit_forms = S.map (L.filter isLiteral) forms in
+			--			--let cons_lit_forms = S.filter (\l -> not $ inconsistent (S.fromList l)) lit_forms in
+			--				let branch_cond = \f ->  B.reduce_CNF_formula (S.union (S.singleton [make_and f]) (S.map (L.map Dctl.negate) (S.delete f lit_forms))) in
+			--					let and_nodes =	S.map (\f -> (AndNode (S.fromList f), branch_cond (L.filter isLiteral f))) forms in
+			--					--(trace ("lit_forms = " ++ (show lit_forms)))
+			--					--(trace ("and_nodes = " ++ (show and_nodes)))
+			--					and_nodes
 			
 
 tiles :: Node -> Set Node
@@ -165,7 +165,6 @@ do_tableaux t = do_tableaux_impl S.empty t
 
 --------------------------}			
 
---TODO: remover desde label los pares irrelevantes
 delete_node :: Node -> Tableaux -> Tableaux
 delete_node n t@(Tableaux root nodes rel l) = case n of
 										(AndNode _) -> Tableaux root nodes' rel' l'
@@ -228,8 +227,10 @@ delete_EU t = let eus = [(n,f) | n <- S.toList $ nodes t, f <- S.toList $ formul
 
 
 checkAU :: Tableaux -> Node -> Formula -> Bool
-checkAU t n f = let val = fromJust $ M.lookup n (tagmap t f) in
-					val /= pinf && val /= ninf --checkAU_impl t n f S.empty
+checkAU t n f = let tag = (tagmap t f) in
+--(trace ("tagAU = " ++ show n ++ show (M.lookup n tag)))
+					let val = fromJust $ M.lookup n tag in
+						val /= pinf && val /= ninf --checkAU_impl t n f S.empty
 
 
 checkAU_impl :: Tableaux -> Node -> Formula -> Set Node -> Bool
@@ -352,7 +353,9 @@ init_tag t g@(A (U f h)) = M.fromList $ l0 ++ linf
 	where
 		l0 = [(n,0) | n <- goal_nodes]
 		linf = [(n,pinf) | n <- (S.toList $ nodes t) \\ goal_nodes]
-		goal_nodes = [n | n <- S.toList $ nodes t, S.member h $ formulas n]
+		--goal_nodes = [n | n <- S.toList $ nodes t, S.member h $ formulas n]
+		--agregue la parte de inconsistent_node
+		goal_nodes = [n | n <- S.toList $ nodes t, not $ inconsistent_node n, S.member h $ formulas n] 
 
 init_tag t g@(E (U f h)) = M.fromList $ l0 ++ linf
 	
@@ -361,7 +364,7 @@ init_tag t g@(E (U f h)) = M.fromList $ l0 ++ linf
 		linf = [(n,pinf) | n <- (S.toList $ nodes t) \\ goal_nodes]
 		goal_nodes = [n | n <- S.toList $ nodes t, S.member h $ formulas n]		
 
-
+init_tag t f = error ("init_tag case not considered: " ++ (show f))
 
 evolve_tag :: Tableaux -> Formula -> Map Node Int -> Map Node Int
 evolve_tag t g m = foldl (new_tag t g) m $ M.keys m
@@ -394,7 +397,8 @@ compute_tag t g m = let m' = evolve_tag t g m in
 
 
 tagmap ::  Tableaux -> Formula -> Map Node Int
-tagmap t g = iterate (compute_tag t g) (init_tag t g) !! (S.size . nodes $ t)
+tagmap t g = let mapn = iterate (compute_tag t g) (init_tag t g) in
+				mapn !! (S.size . nodes $ t)
 
 
 
@@ -664,12 +668,21 @@ renderArcs :: Map Node Int -> Tableaux -> String
 renderArcs num t@(Tableaux r nodes rel l) = foldl (+++) "" (map (uncurry (renderOneArc num l)) (R.toList rel))
 
 renderOneArc :: Map Node Int -> Map (Node,Node) Formula -> Node -> Node -> String
-renderOneArc num l n@(OrNode s) n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n') ++ "[label=\"" ++ (show (l M.! (n,n'))) ++ "\"]"
+renderOneArc num l n@(OrNode s) n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n')-- ++ "[label=\"" ++ (show (l M.! (n,n'))) ++ "\"]"
 renderOneArc num l n n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n')
 
 
 
 
+tag2dot :: Tableaux -> String
+tag2dot t = let f = S.filter Dctl.isF (formulas (root t)) in
+				if S.null f then
+					tab2dot t
+				else
+					let g = S.findMin f in
+						let mapn = iterate (compute_tag t g) (init_tag t g) in
+						--(trace ("isF = " ++ (show f)))
+							tab2dotWithTags t (mapn !! (S.size . nodes $ t))
 
 
 tab2dotWithTags :: (Show a) => Tableaux -> Map Node a -> String
@@ -681,10 +694,16 @@ tab2dotWithTags t@(Tableaux r nodes rel l) m =  let num = numberNodes t in
 								++ "\n}"
 
 renderNodeWithTags :: (Show a) => Map Node Int -> Map Node a -> Node -> String
-renderNodeWithTags num tag n@(OrNode s) = let label = "tag = " ++ (show $ tag M.! n) ++ "\n" ++ foldr (+++) "" (order_flas s) in
-										"n" ++ show (num M.! n) ++ " [shape=circle, label=\"" ++ label ++ "\"];" 
-renderNodeWithTags num tag n@(AndNode s) = let label = "tag = " ++ (show $ tag M.! n) ++ "\n" ++ foldr (+++) "" (order_flas s) in
-										"n" ++ show (num M.! n) ++ " [shape=square, label=\"" ++ label ++ "\"];" 
+renderNodeWithTags num tag n@(OrNode s) = let label = \str -> "tag = " ++ str ++ "\n" ++ foldr (+++) "" (order_flas s) in
+											if (show $ tag M.! n) == show pinf then
+												"n" ++ show (num M.! n) ++ " [shape=circle, label=\"" ++ (label "INF") ++ "\"];" 
+											else
+												"n" ++ show (num M.! n) ++ " [shape=circle, label=\"" ++ (label (show $ tag M.! n)) ++ "\"];" 
+renderNodeWithTags num tag n@(AndNode s) = let label = \str -> "tag = " ++ str ++ "\n" ++ foldr (+++) "" (order_flas s) in
+											if (show $ tag M.! n) == show pinf then
+												"n" ++ show (num M.! n) ++ " [shape=square, label=\"" ++ (label "INF") ++ "\"];" 
+											else
+												"n" ++ show (num M.! n) ++ " [shape=square, label=\"" ++ (label (show $ tag M.! n)) ++ "\"];" 
 
 
 
