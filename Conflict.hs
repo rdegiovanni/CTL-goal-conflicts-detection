@@ -79,7 +79,7 @@ compute_safety_conflicts t t2 = let frontier = (nodes t) S.\\ (nodes t2) in
 compute_reach_conflicts :: Tableaux -> Set Formula -> Set Formula
 compute_reach_conflicts t reach = let t' = refine_tableaux_for_reach t in
 									let tmap = \g -> tagmap t' g  in
-										let frontier = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) == pinf) (nodes t') in
+										let frontier = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) /= 0) (nodes t') in
 											let reach_conflict = \g -> compute_conditions t' (frontier g) (S.singleton (root t')) [] (root t') in
 												let reach_forms = \g -> S.map (make_reach_conflicts (chopF g)) (reach_conflict g) in
 												S.unions $ S.toList $ S.map (\g -> reach_forms g) reach
@@ -165,8 +165,8 @@ make_safety_conflicts :: Formula -> Formula
 make_safety_conflicts f = E (U T f)
 
 make_reach_conflicts :: Formula -> Formula -> Formula
-make_reach_conflicts f g = A (W (Not f) g) 
-
+make_reach_conflicts f g = E (W (Not f) (And g (A (X (A (G (Not f)))))))
+						--A (W (Not f) g)
 make_progress_conflicts :: Formula -> Formula -> Formula
 make_progress_conflicts f g = E (U T (And g (A (X (A (G (Not f)))))))
 
