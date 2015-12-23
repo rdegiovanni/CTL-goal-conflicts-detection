@@ -40,11 +40,12 @@ run_tableaux = \path -> do {
 			putStrLn ("Extracting model.");
 			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2);
 
-			--putStrLn ("Computing conflicts ...");
+			--putStrLn ("SAT");
 			run_conflicts_detection spec t t2;
 			--return ()
 		}
 	else
+		--putStrLn ("UNSAT.");
 		putStrLn ("STRONG conflict detected. The specification is inconsistent.");
 
 	return t

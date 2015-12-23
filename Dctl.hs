@@ -4,6 +4,9 @@ import qualified Data.Set as S
 import Data.Set (Set)
 import qualified SetAux as S
 
+import Data.List	(sortBy, (\\))
+import Data.List as L
+
 import Prelude hiding (break, negate)
 
 import Debug.Trace
@@ -88,6 +91,18 @@ isG (E(W _ F)) = True
 isG (A(G _)) = True
 isG (E(G _)) = True
 isG _ = False
+
+isGF :: Formula -> Bool
+isGF f = if (isG f) then
+			let f_subs = break_rule (chopG f) in
+				L.or $ L.map (L.any isF) f_subs
+		 else False
+		 
+isFG :: Formula -> Bool
+isFG f = if (isF f) then
+			let f_subs = break_rule (chopF f) in
+				L.or $ L.map (L.any isG) f_subs
+		 else False
 
 isProp :: Formula -> Bool
 isProp (Prop _) = True

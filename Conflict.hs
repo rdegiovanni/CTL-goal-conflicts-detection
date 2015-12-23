@@ -68,28 +68,6 @@ potential_conflicts = \spec -> \t -> \t2 -> do {
 				return (S.union (S.union reach_conflicts progress_conflicts) safety_conflicts)
 		}
 }
-	{-
-	let reach = S.filter Dctl.isF spec in
-							 		let reach_conflicts = compute_reach_conflicts t reach in
-							 --	let progress  = S.filter Dctl.isGF spec in
-							 --	let progress_conflicts = compute_progress_conflicts t progress in
-							 		if spec == reach then
-							 			reach_conflicts
-							 		else
-							 			let safety_conflicts = compute_safety_conflicts t t2 in
-							 				S.union safety_conflicts reach_conflicts
-	-}		  
-
-isGF :: Formula -> Bool
-isGF f = if (isG f) then
-			let f_subs = break_rule (chopG f) in
-				L.or $ L.map (L.any isF) f_subs
-		 else False
-isFG :: Formula -> Bool
-isFG f = if (isF f) then
-			let f_subs = break_rule (chopF f) in
-				L.or $ L.map (L.any isG) f_subs
-		 else False
 
 
 compute_safety_conflicts :: Tableaux ->  Tableaux -> Set Formula
@@ -118,10 +96,11 @@ compute_progress_conflicts t pr = let f_subs = \f -> S.unions $ S.toList $ Dctl.
 								let progress = S.unions $ S.toList $ S.map evs pr in 
 									let t' = refine_tableaux_for_reach t in
 										let tmap = \g -> tagmap t' g  in
-										let frontier = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) == pinf) (nodes t') in
-											let progress_conflict = \g -> compute_conditions t' (frontier g) (S.singleton (root t')) [] (root t') in
-												let progress_forms = \g -> S.map make_safety_conflicts (progress_conflict g) in
-													(trace ("progress evs: " ++ show progress))
+										let frontier_inf = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) /= 0) (nodes t') in
+										let frontier = \g -> S.filter (\n -> S.member g (formulas n)) (frontier_inf g) in
+											let progress_conflict =  \g -> {-(trace ("frontier: " ++ show (frontier g)))-} compute_conditions t' (frontier g) (S.singleton (root t')) [] (root t') in
+												let progress_forms = \g -> S.map (\f -> make_progress_conflicts (chopF g) f) (progress_conflict g) in
+													--(trace ("progress evs: " ++ show progress))
 													S.unions $ S.toList $ S.map (\g -> progress_forms g) progress
 
 --compute_conditions tableaux frontier visited level_path current
@@ -187,6 +166,9 @@ make_safety_conflicts f = E (U T f)
 
 make_reach_conflicts :: Formula -> Formula -> Formula
 make_reach_conflicts f g = A (W (Not f) g) 
+
+make_progress_conflicts :: Formula -> Formula -> Formula
+make_progress_conflicts f g = E (U T (And g (A (X (A (G (Not f)))))))
 
 buildPathFormula :: [Formula] -> Formula
 buildPathFormula [] = T

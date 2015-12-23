@@ -244,6 +244,7 @@ delete_AU :: Tableaux -> Tableaux
 delete_AU t = let aus = [(n,f) | n <- S.toList $ nodes t, f <- S.toList $ formulas n, isAU f] in
 				let to_delete0 = {-(trace ("aus = " ++ show aus)) -} filter (\(m,g) -> not (checkAU t m g)) aus in
 					let to_delete1 = map fst to_delete0 in 
+						--(trace ("to_delete1 = " ++ show to_delete1))
 						foldl (flip delete_node) t to_delete1
 
 
@@ -362,7 +363,9 @@ init_tag t g@(E (U f h)) = M.fromList $ l0 ++ linf
 	where
 		l0 = [(n,0) | n <- goal_nodes]
 		linf = [(n,pinf) | n <- (S.toList $ nodes t) \\ goal_nodes]
-		goal_nodes = [n | n <- S.toList $ nodes t, S.member h $ formulas n]		
+		--goal_nodes = [n | n <- S.toList $ nodes t, S.member h $ formulas n]		
+		--agregue la parte de inconsistent_node
+		goal_nodes = [n | n <- S.toList $ nodes t, not $ inconsistent_node n, S.member h $ formulas n]		
 
 init_tag t f = error ("init_tag case not considered: " ++ (show f))
 
@@ -371,19 +374,29 @@ evolve_tag t g m = foldl (new_tag t g) m $ M.keys m
 
 
 new_tag :: Tableaux -> Formula -> Map Node Int -> Node -> Map Node Int
-new_tag t g@(A (U f h)) m n@(AndNode s) = 	if S.member g s && S.member f s && fromJust (M.lookup n m) == pinf && S.all (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
+--particular case when f is True
+new_tag t g@(A (U T h)) m n@(AndNode s) = 	if (not $ inconsistent_node n) && S.member g s && fromJust (M.lookup n m) == pinf && S.all (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
 												M.insert n (1 + (S.findMax $ S.map (\x -> fromJust (M.lookup x m)) (succesors t n))) m
 											else
 												m
-new_tag t g@(A (U f h)) m n@(OrNode s) = 	if S.member g s && fromJust (M.lookup n m) == pinf && S.some (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
+new_tag t g@(A (U f h)) m n@(AndNode s) = 	if (not $ inconsistent_node n) && S.member g s && S.member f s && fromJust (M.lookup n m) == pinf && S.all (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
+												M.insert n (1 + (S.findMax $ S.map (\x -> fromJust (M.lookup x m)) (succesors t n))) m
+											else
+												m
+new_tag t g@(A (U f h)) m n@(OrNode s) = 	if (not $ inconsistent_node n) && S.member g s && fromJust (M.lookup n m) == pinf && S.some (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
 												M.insert n (S.findMin $ S.map (\x -> fromJust (M.lookup x m)) (succesors t n)) m
 											else
 												m
-new_tag t g@(E (U f h)) m n@(AndNode s) = 	if S.member g s && S.member f s && fromJust (M.lookup n m) == pinf && S.some (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
+--particular case when f is True
+new_tag t g@(E (U T h)) m n@(AndNode s) = 	if (not $ inconsistent_node n) && S.member g s && fromJust (M.lookup n m) == pinf && S.some (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
 												M.insert n (1 + (S.findMin $ S.map (\x -> fromJust (M.lookup x m)) (succesors t n))) m
 											else
 												m
-new_tag t g@(E (U f h)) m n@(OrNode s) = 	if S.member g s && fromJust (M.lookup n m) == pinf && S.some (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
+new_tag t g@(E (U f h)) m n@(AndNode s) = 	if (not $ inconsistent_node n) && S.member g s && S.member f s && fromJust (M.lookup n m) == pinf && S.some (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
+												M.insert n (1 + (S.findMin $ S.map (\x -> fromJust (M.lookup x m)) (succesors t n))) m
+											else
+												m
+new_tag t g@(E (U f h)) m n@(OrNode s) = 	if (not $ inconsistent_node n) && S.member g s && fromJust (M.lookup n m) == pinf && S.some (\x -> fromJust (M.lookup x m) < pinf) (succesors t n) then
 												M.insert n (S.findMin $ S.map (\x -> fromJust (M.lookup x m)) (succesors t n)) m
 											else
 												m
@@ -676,13 +689,21 @@ renderOneArc num l n n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num 
 
 tag2dot :: Tableaux -> String
 tag2dot t = let f = S.filter Dctl.isF (formulas (root t)) in
-				if S.null f then
-					tab2dot t
-				else
+				if not $ S.null f then
 					let g = S.findMin f in
-						let mapn = iterate (compute_tag t g) (init_tag t g) in
-						--(trace ("isF = " ++ (show f)))
-							tab2dotWithTags t (mapn !! (S.size . nodes $ t))
+						let mapn = tagmap t g in
+							--(trace ("isF = " ++ (show f)))
+							tab2dotWithTags t mapn 
+				else
+					let gf = S.filter Dctl.isGF (formulas (root t)) in
+					if not $ S.null gf then
+						let g_subs = L.concat $ break_rule (chopG (S.findMin gf)) in
+						let g = (L.filter Dctl.isF g_subs) L.!! 0 in
+							let mapn = tagmap t g in
+							--(trace ("isF g= " ++ (show g)))
+							tab2dotWithTags t mapn
+					else
+						tab2dot t
 
 
 tab2dotWithTags :: (Show a) => Tableaux -> Map Node a -> String
