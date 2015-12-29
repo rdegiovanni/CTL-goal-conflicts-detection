@@ -72,8 +72,8 @@ frontier :: Tableaux -> Set Node
 frontier t = nodes t S.\\ (R.dom . rel) t
 
 
-blocks :: Node -> Set (Node, Formula)
-blocks (OrNode s) = S.map (\f -> (AndNode (S.fromList f), Dctl.T)) $ closure s 
+blocks :: Node -> Set Node
+blocks (OrNode s) = S.map (\f -> AndNode (S.fromList f)) (closure s) 
 			--let forms = (closure s) in
 			--			let lit_forms = S.map (L.filter isLiteral) forms in
 			--			--let cons_lit_forms = S.filter (\l -> not $ inconsistent (S.fromList l)) lit_forms in
@@ -122,13 +122,12 @@ expand t@(Tableaux root nodes rel) = case S.pick $ frontier t of
 
 expand_node :: Node -> Tableaux -> (Tableaux, Set Node)
 expand_node n t@(Tableaux root nodes rel l) = case n of
-												OrNode _ ->	(Tableaux root nodes' rel' l', S.empty)
+												OrNode _ ->	(Tableaux root nodes' rel' l, S.empty)
 																where
-																	new_nodes = S.toList (blocks n)
-																	succs = map fst new_nodes
+																	succs = S.toList (blocks n)
 																	nodes' = nodes `S.union` S.fromList succs
 																	rel' = rel `R.union` R.fromList [(n,succ) | succ <- succs]
-																	l' = l `M.union` M.fromList [ ((n,n'),lb) | (n',lb) <- new_nodes]
+																	--l' = l `M.union` M.fromList [ ((n,n'),lb) | (n',lb) <- new_nodes]
 
 												AndNode s -> case succs of
 																[] ->	(Tableaux root nodes' rel' l, S.singleton dummy)
@@ -167,12 +166,12 @@ do_tableaux t = do_tableaux_impl S.empty t
 
 delete_node :: Node -> Tableaux -> Tableaux
 delete_node n t@(Tableaux root nodes rel l) = case n of
-										(AndNode _) -> Tableaux root nodes' rel' l'
-										(OrNode _) -> S.fold delete_node (Tableaux root nodes' rel' l') (predecesors t n)
+										(AndNode _) -> Tableaux root nodes' rel' l
+										(OrNode _) -> S.fold delete_node (Tableaux root nodes' rel' l) (predecesors t n)
 
 		where
 			rel' = nodes' R.<| rel R.|> nodes'
-			l' =  M.fromList [((x,y),lb) | ((x,y),lb) <- (M.assocs l), x `S.member` nodes', y `S.member` nodes']
+			--l' =  M.fromList [((x,y),lb) | ((x,y),lb) <- (M.assocs l), x `S.member` nodes', y `S.member` nodes']
 			nodes' = nodes S.\\ nn			
 			nn = S.singleton n 
 

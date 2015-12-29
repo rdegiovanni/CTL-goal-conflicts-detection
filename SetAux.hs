@@ -34,4 +34,3 @@ all :: Ord a => (a -> Bool) -> Set a -> Bool
 all p s = S.fold (&&) True (S.map p s)
 
 
-

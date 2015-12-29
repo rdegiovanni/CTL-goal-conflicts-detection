@@ -10,6 +10,9 @@ import qualified Data.Set as S
 import Data.Set (Set)
 import qualified SetAux as S
 
+import qualified Relation as R
+import Relation (Relation)
+
 import Debug.Trace
 
 import qualified Model as Model
@@ -30,15 +33,18 @@ run_tableaux = \path -> do {
 	putStr ("Tableaux .. ");
 	t <- return $ do_tableaux $ make_tableaux spec;
 	putStrLn ("done.");
+	print_Tableaux_info t;
 	writeFile "output/tableaux_raw.dot" (tag2dot t);
 	putStr ("Refining tableaux .. ");
 	t2 <- return $ refine_tableaux t;
 	putStrLn ("done.");
 	if not $ S.null $ nodes t2 then 
 		do {
+			print_Tableaux_info t2;
 			writeFile "output/tableaux.dot" (tag2dot t2);
 			putStrLn ("Extracting model.");
-			writeFile "output/model.dot" (Model.model2dot $ Model.flatten $ model t2);
+			model <- return $ Model.model2dot $ Model.flatten $ model t2;
+			writeFile "output/model.dot" (model);
 
 			--putStrLn ("SAT");
 			run_conflicts_detection spec t t2;
@@ -65,3 +71,8 @@ run_conflicts_detection = \spec -> \t -> \t2 -> do {
 		}
 }
 
+print_Tableaux_info = \t -> do {
+	size <- return $ S.size (nodes t);
+	putStrLn ("#nodes= " ++ show (size) ++ "\t");
+	--putStrLn ("#trans= " ++ show (R.size (rel t)) )
+}

@@ -6,7 +6,7 @@ import Debug.Trace
 
 import qualified Data.Set as S
 import Data.Set (Set)
-import qualified SetAux as S
+--import qualified SetAux as S
 import Data.List	(sortBy, (\\))
 import Data.List as L
 
