@@ -1,4 +1,8 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Dctl where
+
+import GHC.Generics (Generic)
+import Data.Hashable
 
 import qualified Data.Set as S
 import Data.Set (Set)
@@ -27,14 +31,14 @@ data Formula = 	And Formula Formula
 			|	Norm
 			|	T
 			|	F
-			deriving (Eq,Ord)
+			deriving (Eq,Ord,Generic)
 
 data PFormula 	= 	U Formula Formula
 				|	W Formula Formula
 				|	X Formula
 				|	G Formula
 				|	FF Formula
-				deriving (Eq,Ord)
+				deriving (Eq,Ord,Generic)
 
 
 
@@ -97,7 +101,7 @@ isGF f = if (isG f) then
 			let f_subs = break_rule (chopG f) in
 				L.or $ L.map (L.any isF) f_subs
 		 else False
-		 
+
 isFG :: Formula -> Bool
 isFG f = if (isF f) then
 			let f_subs = break_rule (chopF f) in

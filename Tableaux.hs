@@ -1,4 +1,8 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Tableaux where
+
+import GHC.Generics (Generic)
+import Data.Hashable
 
 import Parser
 import BDD as B
@@ -39,7 +43,7 @@ import Model (Model)
 
 data Node 	= 	OrNode {formulas :: Set Formula} 
 			|	AndNode {formulas :: Set Formula} 
-			deriving (Eq, Ord)
+			deriving (Eq, Ord, Generic)
 
 instance Show Node where
 	show (AndNode s) = "<AndNode " ++ show (S.toList s) ++ ">"
@@ -59,14 +63,13 @@ isAnd _ = False
 data Tableaux = Tableaux {
 					root :: Node, 						-- root  
 					nodes :: Set Node,					-- nodes 
-					rel :: Relation Node Node,			-- relation
-					label :: Map (Node,Node) Formula 	-- branch condition
-				} deriving (Show, Eq)
+					rel :: Relation Node Node			-- relation
+				} deriving (Show, Eq,Generic)
 
 
 make_tableaux :: Set Formula -> Tableaux
 make_tableaux s = let root = OrNode s in 
-					Tableaux root (S.singleton root) R.empty M.empty
+					Tableaux root (S.singleton root) R.empty
 
 frontier :: Tableaux -> Set Node
 frontier t = nodes t S.\\ (R.dom . rel) t
@@ -98,44 +101,21 @@ tiles (AndNode s) = let ex = S.map chopEX (S.filter isEX s) in
 
 
 
-{-
-expand :: Tableaux -> Tableaux
-expand t@(Tableaux root nodes rel) = case S.pick $ frontier t of
-								Nothing -> t
-								Just (n@(OrNode _)) ->	Tableaux root nodes' rel'
-														where
-															succs = S.toList (blocks n)
-															nodes' = nodes `S.union` S.fromList succs
-															rel' = rel `R.union` R.fromList [(n,succ) | succ <- succs]
-								Just (n@(AndNode s)) -> case succs of
-															[] ->	Tableaux root nodes' rel'
-																	where
-																		dummy = (OrNode s)
-																		nodes' = dummy `S.insert` nodes
-																		rel' = rel `R.union` R.fromList [(n,dummy), (dummy,n)]
-															x:_ -> Tableaux root nodes' rel'
-																	where 
-																		nodes' = nodes `S.union` S.fromList succs
-																		rel' = rel `R.union` R.fromList [(n,succ) | succ <- succs]
-														where succs = S.toList (tiles n)
--}
-
 expand_node :: Node -> Tableaux -> (Tableaux, Set Node)
-expand_node n t@(Tableaux root nodes rel l) = case n of
-												OrNode _ ->	(Tableaux root nodes' rel' l, S.empty)
+expand_node n t@(Tableaux root nodes rel) = case n of
+												OrNode _ ->	(Tableaux root nodes' rel', S.empty)
 																where
 																	succs = S.toList (blocks n)
 																	nodes' = nodes `S.union` S.fromList succs
 																	rel' = rel `R.union` R.fromList [(n,succ) | succ <- succs]
-																	--l' = l `M.union` M.fromList [ ((n,n'),lb) | (n',lb) <- new_nodes]
 
 												AndNode s -> case succs of
-																[] ->	(Tableaux root nodes' rel' l, S.singleton dummy)
+																[] ->	(Tableaux root nodes' rel', S.singleton dummy)
 																			where
 																			dummy = (OrNode s)
 																			nodes' = dummy `S.insert` nodes
 																			rel' = rel `R.union` R.fromList [(n,dummy), (dummy,n)]
-																x:_ -> (Tableaux root nodes' rel' l, S.empty)
+																x:_ -> (Tableaux root nodes' rel', S.empty)
 																			where 
 																				nodes' = nodes `S.union` S.fromList succs
 																				rel' = rel `R.union` R.fromList [(n,succ) | succ <- succs]
@@ -165,13 +145,12 @@ do_tableaux t = do_tableaux_impl S.empty t
 --------------------------}			
 
 delete_node :: Node -> Tableaux -> Tableaux
-delete_node n t@(Tableaux root nodes rel l) = case n of
-										(AndNode _) -> Tableaux root nodes' rel' l
-										(OrNode _) -> S.fold delete_node (Tableaux root nodes' rel' l) (predecesors t n)
+delete_node n t@(Tableaux root nodes rel) = case n of
+										(AndNode _) -> Tableaux root nodes' rel'
+										(OrNode _) -> S.fold delete_node (Tableaux root nodes' rel') (predecesors t n)
 
 		where
 			rel' = nodes' R.<| rel R.|> nodes'
-			--l' =  M.fromList [((x,y),lb) | ((x,y),lb) <- (M.assocs l), x `S.member` nodes', y `S.member` nodes']
 			nodes' = nodes S.\\ nn			
 			nn = S.singleton n 
 
@@ -191,7 +170,7 @@ inconsistent_node (OrNode s) = inconsistent s
 
 
 delete_unreachable :: Tableaux -> Tableaux
-delete_unreachable t@(Tableaux root nodes rel l) = let lookup = R.lookupDom root (R.closure rel) in
+delete_unreachable t@(Tableaux root nodes rel) = let lookup = R.lookupDom root (R.closure rel) in
 													let reach = if isJust lookup then fromJust lookup else S.empty in 
 														S.fold delete_node t (nodes S.\\ reach)
 
@@ -427,7 +406,7 @@ dag t n@(AndNode _) f@(A (U g h)) = build_dagAU t (tagmap t f) $ init_dag n
 dag t n@(AndNode _) f@(E (U g h)) = build_dagEU t (tagmap t f) $ init_dag n
 dag t n@(OrNode _) f = error ("dag called with OrNode : " ++ (show n) ++ "and formula f : " ++ (show f)) 
 
-init_dag = \n -> Tableaux n (S.singleton n) R.empty M.empty
+init_dag = \n -> Tableaux n (S.singleton n) R.empty
 
 
 build_dagAU :: Tableaux -> Map Node Int -> Tableaux -> Tableaux
@@ -451,12 +430,12 @@ build_dagEU t m dag  = 	if stop then
 
 
 treat_dag_node :: Tableaux -> Map Node Int -> Tableaux -> Node -> Tableaux
-treat_dag_node t@(Tableaux r ns rel l1) m dag@(Tableaux dr dns drel l2) n@(OrNode _) = let c = fst . head $ candidates in
-																					Tableaux dr (dns S.<+ c) (R.insert n c drel) (M.union l1 l2)
+treat_dag_node t@(Tableaux r ns rel) m dag@(Tableaux dr dns drel) n@(OrNode _) = let c = fst . head $ candidates in
+																					Tableaux dr (dns S.<+ c) (R.insert n c drel)
 	where 
 		candidates = sortBy (comparing snd) (filter (\p -> S.member (fst p) (succesors t n)) (M.toList m))
 
-treat_dag_node t@(Tableaux r ns rel l1) m dag@(Tableaux dr dns drel l2) n@(AndNode _) = Tableaux dr ns' rel' (M.union l1 l2)
+treat_dag_node t@(Tableaux r ns rel) m dag@(Tableaux dr dns drel) n@(AndNode _) = Tableaux dr ns' rel'
 																					where
 																						succs = S.toList (succesors t n)
 																						ns' = dns `S.union` S.fromList succs
@@ -467,7 +446,7 @@ treat_dag_node t@(Tableaux r ns rel l1) m dag@(Tableaux dr dns drel l2) n@(AndNo
 
 
 tab_to_model :: Int -> Tableaux -> Model
-tab_to_model k t@(Tableaux r ns rel l) = Model.Model (trans r) (S.fromList mnodes) new_rel
+tab_to_model k t@(Tableaux r ns rel) = Model.Model (trans r) (S.fromList mnodes) new_rel
 
 	where
 		new_rel = (R.map trans ((S.fromList) tnodes R.<| (rel R.* rel) R.|> (S.fromList tnodes))) 
@@ -499,7 +478,7 @@ build_frag_noeven :: Tableaux -> Node -> Tableaux
 build_frag_noeven t n@(AndNode _) = result
 
 	where
-		result = Tableaux n new_nodes new_rel (label t)
+		result = Tableaux n new_nodes new_rel
 		new_rel = R.fromList $ [(n,l1) | l1 <- S.toList $ level1] ++ [(l1,l2) | l1 <- S.toList $ level1, l2 <- S.toList $ level2, R.member l1 l2 (rel t)] --new_nodes R.<| (rel t) R.|> new_nodes
 		new_nodes = level1 S.+ level2 S.<+ n	
 		level2 = S.map (fromJust . S.pick) $ S.map (succesors t) level1
@@ -654,7 +633,7 @@ flipMap x = M.fromList (map (\p -> (snd p, fst p)) (M.toList x))
 (+++) = (\x y -> x ++ ("\n" ++ y))
 
 tab2dot :: Tableaux -> String
-tab2dot t@(Tableaux r nodes rel l) =  let num = numberNodes t in
+tab2dot t@(Tableaux r nodes rel) =  let num = numberNodes t in
 								"digraph {\n" ++ 
 								(S.fold (+++) "" (S.map (renderNode num) nodes)) ++ 
 								"\n" ++ 
@@ -677,11 +656,11 @@ renderNode num n@(AndNode s) = let label = foldr (+++) "" (order_flas s) in
 
 
 renderArcs :: Map Node Int -> Tableaux -> String
-renderArcs num t@(Tableaux r nodes rel l) = foldl (+++) "" (map (uncurry (renderOneArc num l)) (R.toList rel))
+renderArcs num t@(Tableaux r nodes rel) = foldl (+++) "" (map (uncurry (renderOneArc num)) (R.toList rel))
 
-renderOneArc :: Map Node Int -> Map (Node,Node) Formula -> Node -> Node -> String
-renderOneArc num l n@(OrNode s) n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n')-- ++ "[label=\"" ++ (show (l M.! (n,n'))) ++ "\"]"
-renderOneArc num l n n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n')
+renderOneArc :: Map Node Int -> Node -> Node -> String
+renderOneArc num n@(OrNode s) n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n')-- ++ "[label=\"" ++ (show (l M.! (n,n'))) ++ "\"]"
+renderOneArc num n n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.! n')
 
 
 
@@ -706,7 +685,7 @@ tag2dot t = let f = S.filter Dctl.isF (formulas (root t)) in
 
 
 tab2dotWithTags :: (Show a) => Tableaux -> Map Node a -> String
-tab2dotWithTags t@(Tableaux r nodes rel l) m =  let num = numberNodes t in
+tab2dotWithTags t@(Tableaux r nodes rel) m =  let num = numberNodes t in
 								"digraph {\n" ++ 
 								(S.fold (+++) "" (S.map (renderNodeWithTags num m) nodes)) ++ 
 								"\n" ++ 

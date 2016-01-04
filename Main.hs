@@ -74,5 +74,5 @@ run_conflicts_detection = \spec -> \t -> \t2 -> do {
 print_Tableaux_info = \t -> do {
 	size <- return $ S.size (nodes t);
 	putStrLn ("#nodes= " ++ show (size) ++ "\t");
-	--putStrLn ("#trans= " ++ show (R.size (rel t)) )
+	putStrLn ("#trans= " ++ show (R.size (rel t)) )
 }
