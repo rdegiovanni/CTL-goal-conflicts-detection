@@ -1,0 +1,40 @@
+-- train approaching (ta), entering the crossing (tc), and leaving the crossing (tl).
+-- gate closed (gc), opened (go), and the gate may fails (gf).
+-- car approaching (ca) and crosses the crossing (cc) and finally leaves the crossing (cl).
+
+--DOMAIN
+--AG(ta -> !tc && !tl);
+--AG(tc -> !ta && !tl);
+--AG(tl -> !ta && !tc);
+AG((!ta && !tc && !tl) || (ta && !tc && !tl) || (!ta && tc && !tl) || (!ta && !tc && tl));
+
+--AG(gc && !gf -> !go);
+--AG(go && !gf -> !gc);
+--the gate may fail.
+AG((!gc && !go) || (gc && !go) || (!gc && go));
+AG(go && gf -> AX(gc));
+AG(gc && gf -> AX(go));
+
+--AG(ca -> !cc && !cl);
+--AG(cc -> !ca && !cl);
+--AG(cl -> !ca && !cc);
+AG((!ca && !cc && !cl) || (ca && !cc && !cl) || (!ca && cc && !cl) || (!ca && !cc && cl));
+
+
+--the train never stops
+AG(ta -> AX(tc && AX(tl)));
+
+--The car approaches the crossing and crosses the crossing if the gate is open.
+AG(ca && go -> AX(cc && AX(cl)));
+
+
+--GOALS
+--Whenever a train is approaching, the gate shall close.
+AG(ta -> AX(gc));
+
+--the gate will open again when the train has left the crossing.
+AG(tl -> AX(go));
+
+--the car and the train cannot be crossing at the same time
+AG(!tc || !cc)
+
