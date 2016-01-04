@@ -88,16 +88,17 @@ blocks (OrNode s) = S.map (\f -> AndNode (S.fromList f)) (closure s)
 			
 
 tiles :: Node -> Set Node
-tiles (AndNode s) = let ex = S.map chopEX (S.filter isEX s) in
-						let ax = S.map chopAX (S.filter isAX s) in
-							if (S.null ex) && (S.null ax) then
-								S.empty
+tiles (AndNode s) = let ex = S.map chopEX (S.filter isEX s) ;
+						ax = S.map chopAX (S.filter isAX s) 
+					in
+						if (S.null ex) && (S.null ax) then
+							S.empty
+						else
+							if (S.null ex) && not (S.null ax) then
+								S.singleton (OrNode ax)
 							else
-								if (S.null ex) && not (S.null ax) then
-									S.singleton (OrNode ax)
-								else
-									let new_ex = (if not (S.null ex) then ex else S.singleton (E(X T))) in
-										(\ex -> S.map OrNode (S.map (`S.insert` ax) ex)) new_ex
+								let new_ex = (if not (S.null ex) then ex else S.singleton (E(X T))) in
+									(\ex -> S.map OrNode (S.map (`S.insert` ax) ex)) new_ex
 
 
 
@@ -170,14 +171,15 @@ inconsistent_node (OrNode s) = inconsistent s
 
 
 delete_unreachable :: Tableaux -> Tableaux
-delete_unreachable t@(Tableaux root nodes rel) = let lookup = R.lookupDom root (R.closure rel) in
-													let reach = if isJust lookup then fromJust lookup else S.empty in 
-														S.fold delete_node t (nodes S.\\ reach)
+delete_unreachable t@(Tableaux root nodes rel) =let lookup = R.lookupDom root (R.closure rel) ;
+													reach = if isJust lookup then fromJust lookup else S.empty 
+												in 
+													S.fold delete_node t (nodes S.\\ reach)
 
 
 delete_or :: Tableaux -> Tableaux
 delete_or t = let to_delete = S.filter (\n -> isOr n && S.null (succesors t n)) (nodes t) in
-												S.fold delete_node t to_delete
+					S.fold delete_node t to_delete
 
 
 
@@ -196,19 +198,21 @@ checkEU_impl t n@(AndNode s) f@(E (U g h)) v = if S.member h s then
 
 
 delete_EU :: Tableaux -> Tableaux
-delete_EU t = let eus = [(n,f) | n <- S.toList $ nodes t, f <- S.toList $ formulas n, isEU f] in
-				let to_delete0 = filter (\(m,g) -> not (checkEU t m g)) eus in
-					let to_delete1 = map fst to_delete0 in 
-						foldl (flip delete_node) t to_delete1
+delete_EU t = 	let eus = [(n,f) | n <- S.toList $ nodes t, f <- S.toList $ formulas n, isEU f] ;
+					to_delete0 = filter (\(m,g) -> not (checkEU t m g)) eus ;
+					to_delete1 = map fst to_delete0
+				in 
+					foldl (flip delete_node) t to_delete1
 
 
 
 
 checkAU :: Tableaux -> Node -> Formula -> Bool
-checkAU t n f = let tag = (tagmap t f) in
+checkAU t n f = let tag = (tagmap t f) ;
 --(trace ("tagAU = " ++ show n ++ show (M.lookup n tag)))
-					let val = fromJust $ M.lookup n tag in
-						val /= pinf && val /= ninf --checkAU_impl t n f S.empty
+					val = fromJust $ M.lookup n tag 
+				in
+					val /= pinf && val /= ninf --checkAU_impl t n f S.empty
 
 
 checkAU_impl :: Tableaux -> Node -> Formula -> Set Node -> Bool
@@ -219,11 +223,12 @@ checkAU_impl t n@(AndNode s) f@(A (U g h)) v = if S.member h s then
 													S.member g s && S.all (\m -> checkAU_impl t m f (n `S.insert` v)) ((succesors t n) `S.difference` v)
 
 delete_AU :: Tableaux -> Tableaux
-delete_AU t = let aus = [(n,f) | n <- S.toList $ nodes t, f <- S.toList $ formulas n, isAU f] in
-				let to_delete0 = {-(trace ("aus = " ++ show aus)) -} filter (\(m,g) -> not (checkAU t m g)) aus in
-					let to_delete1 = map fst to_delete0 in 
-						--(trace ("to_delete1 = " ++ show to_delete1))
-						foldl (flip delete_node) t to_delete1
+delete_AU t = 	let aus = [(n,f) | n <- S.toList $ nodes t, f <- S.toList $ formulas n, isAU f] ;
+					to_delete0 = {-(trace ("aus = " ++ show aus)) -} filter (\(m,g) -> not (checkAU t m g)) aus ;
+					to_delete1 = map fst to_delete0
+				in 
+					--(trace ("to_delete1 = " ++ show to_delete1))
+					foldl (flip delete_node) t to_delete1
 
 
 
@@ -647,9 +652,9 @@ order_flas s = reverse $ sortBy (comparing length) (S.toList (S.map show selecti
 
 renderNode :: Map Node Int -> Node -> String
 renderNode num n@(OrNode s) = let label = foldr (+++) "" (order_flas s) in
-										"n" ++ show (num M.! n) ++ " [shape=circle, label=\"" ++ label ++ "\"];" 
+									"n" ++ show (num M.! n) ++ " [shape=circle, label=\"" ++ label ++ "\"];" 
 renderNode num n@(AndNode s) = let label = foldr (+++) "" (order_flas s) in
-										"n" ++ show (num M.! n) ++ " [shape=square, label=\"" ++ label ++ "\"];" 
+									"n" ++ show (num M.! n) ++ " [shape=square, label=\"" ++ label ++ "\"];" 
 
 
 
@@ -668,16 +673,18 @@ renderOneArc num n n' = "n" ++ show (num M.! n) ++ " -> " ++ "n" ++ show (num M.
 tag2dot :: Tableaux -> String
 tag2dot t = let f = S.filter Dctl.isF (formulas (root t)) in
 				if not $ S.null f then
-					let g = S.findMin f in
-						let mapn = tagmap t g in
-							--(trace ("isF = " ++ (show f)))
-							tab2dotWithTags t mapn 
+					let g = S.findMin f ;
+						mapn = tagmap t g 
+					in
+						--(trace ("isF = " ++ (show f)))
+						tab2dotWithTags t mapn 
 				else
 					let gf = S.filter Dctl.isGF (formulas (root t)) in
 					if not $ S.null gf then
-						let g_subs = L.concat $ break_rule (chopG (S.findMin gf)) in
-						let g = (L.filter Dctl.isF g_subs) L.!! 0 in
-							let mapn = tagmap t g in
+						let g_subs = L.concat $ break_rule (chopG (S.findMin gf)) ;
+							g = (L.filter Dctl.isF g_subs) L.!! 0 ;
+						 	mapn = tagmap t g 
+						 in
 							--(trace ("isF g= " ++ (show g)))
 							tab2dotWithTags t mapn
 					else
