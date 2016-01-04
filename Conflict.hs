@@ -160,9 +160,13 @@ condition_to_frontier t lp conflict_nodes = if S.null conflict_nodes then
 												S.empty
 											else
 												let incons_paths = S.map (branch_condition t) conflict_nodes ;
-													incons_form = Dctl.negate $ make_or (S.toList incons_paths)
+													incons_form = Dctl.negate $ make_or (S.toList incons_paths) ;
+													path_form = buildPathFormula (lp ++ [incons_form])
 												in
-													S.singleton $ buildPathFormula (lp ++ [incons_form])
+													if path_form == Dctl.F then
+														S.empty
+													else
+														S.singleton $ path_form
 														
 
 --branch condition in one step
@@ -181,6 +185,12 @@ make_progress_conflicts f g = E (U T (And g (A (X (A (G (Not f)))))))
 buildPathFormula :: [Formula] -> Formula
 buildPathFormula [] = T
 buildPathFormula [x] = B.reduce_formula x
-buildPathFormula (x:y:xs) = And (B.reduce_formula x) (E (X (buildPathFormula (y:xs))))
+buildPathFormula (x:y:xs) = let x_form = (B.reduce_formula x) ;
+								tail_form = buildPathFormula (y:xs)
+							in
+								if ((x_form == Dctl.F) || (tail_form == Dctl.F)) then
+									Dctl.F
+								else
+									And x_form (E (X (tail_form)))
 
 
