@@ -28,7 +28,8 @@ main = do {
 
 run_tableaux = \path -> do {
 	str <- readFile path;
-	spec <- return $ parseSpecification str;
+	(dom,goals) <- return $ parseDOMandGOALS str;
+	spec <- return $ S.union dom goals;
 	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
 	putStr ("Tableaux .. ");
 	t <- return $ do_tableaux $ make_tableaux spec;
@@ -47,7 +48,7 @@ run_tableaux = \path -> do {
 			writeFile "output/model.dot" (model);
 
 			--putStrLn ("SAT");
-			run_conflicts_detection spec t t2;
+			run_conflicts_detection dom goals t t2;
 			--return ()
 		}
 	else
@@ -57,7 +58,8 @@ run_tableaux = \path -> do {
 	return t
 }
 
-run_conflicts_detection = \spec -> \t -> \t2 -> do {
+run_conflicts_detection = \dom -> \goals -> \t -> \t2 -> do {
+	spec <- return $ S.union dom goals;
 	potential_conflict_set <- potential_conflicts spec t t2;
 	if S.null potential_conflict_set then 
 			putStrLn ("No WEAK conflict detected.");
@@ -66,7 +68,7 @@ run_conflicts_detection = \spec -> \t -> \t2 -> do {
 			putStrLn ("Potential conflicts detected:");
 			putStrLn (show potential_conflict_set);
 			putStrLn ("Filtering WEAK conflicts...");
-			weak_conflicts_set <- return $ weak_conflicts spec potential_conflict_set;
+			weak_conflicts_set <- return $ weak_conflicts dom goals potential_conflict_set;
 			putStrLn (show weak_conflicts_set)
 		}
 }

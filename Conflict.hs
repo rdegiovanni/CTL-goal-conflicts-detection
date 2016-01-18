@@ -29,11 +29,12 @@ import Debug.Trace
 -- spec: all formulas that conform the specification.
 -- potential_conflicts: potential conflicts computed.
 -- returns the seat of portential conflicts that meet with the definition of weak conflicts.
-weak_conflicts :: Set Formula -> Set Formula -> Set Formula
-weak_conflicts spec pot_conflicts = let incons_conflicts = S.filter (logical_inconsistency spec) pot_conflicts ;
-										min_conflicts 	 = S.filter (minimality spec) incons_conflicts 
-									in	
-										min_conflicts
+weak_conflicts :: Set Formula -> Set Formula -> Set Formula -> Set Formula
+weak_conflicts dom goals pot_conflicts =let spec = S.union dom goals ;
+										 	incons_conflicts = S.filter (logical_inconsistency spec) pot_conflicts ;
+											min_conflicts 	 = S.filter (minimality dom goals) incons_conflicts 
+										 in	
+											min_conflicts
 
 -- check logical inconsistency 
 logical_inconsistency :: Set Formula -> Formula -> Bool
@@ -42,9 +43,11 @@ logical_inconsistency spec pc = let t = do_tableaux $ make_tableaux (spec S.<+ p
 								in
 									S.null (nodes t2)
 --check minimality
-minimality :: Set Formula -> Formula -> Bool
-minimality spec ic = let all_comb = S.map (\n -> S.delete n spec) spec in
-						S.all (\comb -> not$ logical_inconsistency comb ic) all_comb
+minimality :: Set Formula -> Set Formula -> Formula -> Bool
+minimality dom goals ic = 	let spec = S.union dom goals;
+								all_comb = S.map (\n -> S.delete n spec) goals
+						 	in
+						 		S.all (\comb -> not$ logical_inconsistency comb ic) all_comb
 
 --Compute potential conflicts
 --potential_conflicts :: Set Formula -> Tableaux -> Tableaux -> Set Formula
