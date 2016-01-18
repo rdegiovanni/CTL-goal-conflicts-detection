@@ -186,12 +186,14 @@ break f = S.fromList (map S.fromList (break_rule f))
 
 break_rule :: Formula -> [[Formula]]
 -- Propositional
+break_rule (Prop p)		= 	[[(Prop p)]]
 break_rule (Or p q)		=	[[p],[q]]
 break_rule (And p q)	= 	[[p,q]]
---break_rule (Not p)		=	break_rule (negate p)
+break_rule (Not p)		=	break_rule (negate p)
 break_rule (If p q)		=	[[negate p],[q]]
 break_rule (Iff p q)	=	[[negate p, negate q],[p,q]]
 -- All
+break_rule (A (X p))	= 	L.map (L.map (\f -> A (X f))) (break_rule p)
 break_rule (A (U p q))	=	[[q],[p, A (X (A (U p q)))]]
 break_rule (A (W p q))	=	[[q],[p, A (X (A (W p q)))]]
 break_rule (A (G p))	=	[[p, A (X (A (G p)))]]
@@ -211,6 +213,8 @@ break_rule (O (X p))	=	[[A(X (Or (Not Norm) p))]]
 break_rule (P (U p q))	=	[[Norm, q],[Norm, p, P (X (P (U p q)))]]
 break_rule (P (W p q))	=	[[Norm, q],[Norm, p, P (X (P (W p q)))]]
 break_rule (P (X p))	=	[[E(X (And Norm p))]]
+
+break_rule f 			=  error ("ERROR break_rule: " ++ (show f))
 
 
 
