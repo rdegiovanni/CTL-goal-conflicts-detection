@@ -1,0 +1,14 @@
+Goals:
+-- Achieve_RequestSatisfied 
+AG(requesting -> AF using);
+
+-- Avoid_UnReliableResourceUsed
+AG(!reliable -> AG(! using));
+
+--Achieve_ResourceKeptAsLongAsNeeded
+AG(using -> AX(needs -> using));
+-- Cease_ResourceEventuallyAvailable 
+AG(using -> AF(!using))
+
+Domain:
+AG(needs -> using)

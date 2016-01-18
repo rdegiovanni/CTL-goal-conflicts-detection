@@ -1,0 +1,10 @@
+Domain
+AG(AX(needs -> using))
+
+GOALS
+--Achieve_ResourceKeptAsLongAsNeeded
+AG(using -> AX(needs -> using));
+-- Cease_ResourceEventuallyAvailable 
+AG(using -> AF(!using))
+
+
