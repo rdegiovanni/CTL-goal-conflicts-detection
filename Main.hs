@@ -35,14 +35,14 @@ run_tableaux = \path -> do {
 	t <- return $ do_tableaux $ make_tableaux spec;
 	putStrLn ("done.");
 	print_Tableaux_info t;
-	writeFile "output/tableaux_raw.dot" (tag2dot t);
+	writeFile "output/tableaux_raw.dot" (tab2dot t);
 	putStr ("Refining tableaux .. ");
 	t2 <- return $ refine_tableaux t;
 	putStrLn ("done.");
 	if not $ S.null $ nodes t2 then 
 		do {
 			print_Tableaux_info t2;
-			writeFile "output/tableaux.dot" (tag2dot t2);
+			writeFile "output/tableaux.dot" (tab2dot t2);
 			putStrLn ("Extracting model.");
 			model <- return $ Model.model2dot $ Model.flatten $ model t2;
 			writeFile "output/model.dot" (model);

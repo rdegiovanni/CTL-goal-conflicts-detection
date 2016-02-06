@@ -238,7 +238,7 @@ deletion_rules = delete_EU . delete_AU . delete_or . delete_unreachable . delete
 
 refine_tableaux :: Tableaux -> Tableaux
 refine_tableaux t = let t' = deletion_rules t in
-					if t' == t then t else deletion_rules t'
+					if t' == t then t else refine_tableaux t'
 
 
 {-------------------------
