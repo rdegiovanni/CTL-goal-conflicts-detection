@@ -241,6 +241,12 @@ refine_tableaux t = let t' = deletion_rules t in
 					if t' == t then t else refine_tableaux t'
 
 
+isSAT :: Set Formula -> Bool
+isSAT spec = let t = do_tableaux $ make_tableaux spec ;	
+			   	 t2 = refine_tableaux t 
+				 in
+					not $ S.null (nodes t2)	
+
 {-------------------------
 
 

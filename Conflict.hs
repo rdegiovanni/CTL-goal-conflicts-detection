@@ -29,25 +29,39 @@ import Debug.Trace
 -- spec: all formulas that conform the specification.
 -- potential_conflicts: potential conflicts computed.
 -- returns the seat of portential conflicts that meet with the definition of weak conflicts.
-weak_conflicts :: Set Formula -> Set Formula -> Set Formula -> Set Formula
-weak_conflicts dom goals pot_conflicts =let spec = S.union dom goals ;
-										 	incons_conflicts = S.filter (logical_inconsistency spec) pot_conflicts ;
-											min_conflicts 	 = S.filter (minimality dom goals) incons_conflicts 
-										 in	
-											min_conflicts
+weak_conflicts :: Set Formula -> Set Formula -> Set Formula -> Bool -> Set Formula
+weak_conflicts dom goals pot_conflicts cm = let spec = S.union dom goals ;
+										 		incons_conflicts = S.filter (logical_inconsistency spec) pot_conflicts ;
+												min_conflicts 	 = S.filter (if cm then (minimality dom goals) else (domain_consistency dom)) incons_conflicts ;
+										 		no_trivials 	 = S.filter (no_trivial_BCs goals) min_conflicts
+										 	in	
+												no_trivials
 
 -- check logical inconsistency 
 logical_inconsistency :: Set Formula -> Formula -> Bool
-logical_inconsistency spec pc = let t = do_tableaux $ make_tableaux (spec S.<+ pc) ;
-									t2 = refine_tableaux t 
-								in
-									S.null (nodes t2)
+logical_inconsistency spec pc = not $ isSAT (spec S.<+ pc)
+
 --check minimality
 minimality :: Set Formula -> Set Formula -> Formula -> Bool
 minimality dom goals ic = 	let spec = S.union dom goals;
 								all_comb = S.map (\n -> S.delete n spec) goals
+								
 						 	in
-						 		S.all (\comb -> not$ logical_inconsistency comb ic) all_comb
+						 		(trace ".")
+						 		S.all (\comb -> isSAT (comb S.<+ ic)) all_comb
+
+-- check logical inconsistency 
+domain_consistency :: Set Formula -> Formula -> Bool
+domain_consistency dom bc = isSAT (dom S.<+ bc)
+
+no_trivial_BCs :: Set Formula -> Formula -> Bool
+no_trivial_BCs goals bc = 	let neg_goals = Dctl.negate (make_and (S.toList goals)) ;
+							  	neg_bc = Dctl.negate bc
+							in
+								if not $ isSAT (goals S.<+ bc) then 
+									isSAT (S.singleton (Dctl.And neg_goals neg_bc))
+								else
+									True
 
 --Compute potential conflicts
 --potential_conflicts :: Set Formula -> Tableaux -> Tableaux -> Set Formula
@@ -74,11 +88,11 @@ potential_conflicts = \spec -> \t -> \t2 -> do {
 		}
 }
 
-
 compute_safety_conflicts :: Tableaux ->  Tableaux -> Set Formula
 compute_safety_conflicts t t2 = let frontier = (nodes t) S.\\ (nodes t2) ;
 									forms = compute_conditions t frontier (S.singleton (root t)) [] (root t) 
 								in
+									(trace ("#frontier-safe: " ++ show (S.size frontier)))
 									S.map make_safety_conflicts forms
 
 
@@ -86,14 +100,14 @@ compute_reach_conflicts :: Tableaux -> Set Formula -> Set Formula
 compute_reach_conflicts t reach = 	let t' = refine_tableaux_for_reach t ;
 									  	tmap = \g -> tagmap t' g ;
 										frontier = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) /= 0) (nodes t') ;
-										reach_conflict = \g -> compute_conditions t' (frontier g) (S.singleton (root t')) [] (root t') ;
+										reach_conflict = \g -> (trace ("#frontier-reach: " ++ show (S.size (frontier g)))) compute_conditions t' (frontier g) (S.singleton (root t')) [] (root t') ;
 										reach_forms = \g -> S.map (make_reach_conflicts (chopF g)) (reach_conflict g) 
 									in
 										S.unions $ S.toList $ S.map (\g -> reach_forms g) reach
 
 refine_tableaux_for_reach :: Tableaux -> Tableaux
 refine_tableaux_for_reach t = let t' = (delete_or . delete_unreachable . delete_inconsistent) t in
-								if t' == t then t else refine_tableaux_for_reach t'
+								if t' == t then (trace ("#tableaux_for_reach: " ++ show (S.size (nodes t)))) t else refine_tableaux_for_reach t'
 
 
 
@@ -103,9 +117,9 @@ compute_progress_conflicts t pr =	let f_subs = \f -> S.unions $ S.toList $ Dctl.
 										progress = S.unions $ S.toList $ S.map evs pr ; 
 										t' = refine_tableaux_for_reach t ;
 										tmap = \g -> tagmap t' g ;
-										frontier_inf = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) /= 0) (nodes t') ;
+										frontier_inf = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) == pinf) (nodes t') ;
 										frontier = \g -> S.filter (\n -> S.member g (formulas n)) (frontier_inf g) ;
-										progress_conflict =  \g -> compute_conditions t' (frontier g) (S.singleton (root t')) [] (root t') ;
+										progress_conflict =  \g -> (trace ("#frontier-prog: " ++ show (S.size (frontier g)))) compute_conditions t' (frontier g) (S.singleton (root t')) [] (root t') ;
 										progress_forms = \g -> S.map (\f -> make_progress_conflicts (chopF g) f) (progress_conflict g) 
 									in
 										--(trace ("progress evs: " ++ show progress))
@@ -180,7 +194,8 @@ make_safety_conflicts :: Formula -> Formula
 make_safety_conflicts f = E (U T f)
 
 make_reach_conflicts :: Formula -> Formula -> Formula
-make_reach_conflicts f g = E (W (Not f) (And g (A (X (A (G (Not f)))))))
+make_reach_conflicts f g = E (W (Not f) (And g (A (G (Not f))))) 
+						--E (W (Not f) (And g (A (X (A (G (Not f)))))))
 						--A (W (Not f) g)
 make_progress_conflicts :: Formula -> Formula -> Formula
 make_progress_conflicts f g = E (U T (And g (A (X (A (G (Not f)))))))
@@ -197,3 +212,12 @@ buildPathFormula (x:y:xs) = let x_form = (B.reduce_formula x) ;
 									And x_form (E (X (tail_form)))
 
 
+conflictsToString :: [Formula] -> [String]
+conflictsToString [] = []
+conflictsToString (x:xs) = (show x):(conflictsToString xs)
+
+print_Conflicts_info = \bcs -> do {
+	putStrLn ("#conflicts= " ++ show (S.size bcs) );
+	bcs_str <- return $ conflictsToString (S.toList bcs);
+	mapM_ putStrLn bcs_str
+}

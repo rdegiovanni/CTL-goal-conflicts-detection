@@ -83,8 +83,8 @@ isAU (A(U _ _)) = True
 isAU _ = False
 
 isF :: Formula -> Bool
-isF (A(U T _)) = True
-isF (E(U T _)) = True
+isF (A(U f _)) = stateForm f
+isF (E(U f _)) = stateForm f
 isF (A(FF _)) = True
 isF (E(FF _)) = True
 isF _ = False
@@ -139,9 +139,10 @@ chopAX :: Formula -> Formula
 chopAX (A (X f)) = f
 chopAX f = f 
 
+--precondition: we assume the input formula is effectively a future (F) formula.
 chopF :: Formula -> Formula
-chopF (A(U T f)) = f
-chopF (E(U T f)) = f
+chopF (A(U _ f)) = f
+chopF (E(U _ f)) = f
 chopF (A(FF f)) = f
 chopF (E(FF f)) = f
 
@@ -152,7 +153,16 @@ chopG (A(G f)) = f
 chopG (E(G f)) = f
 
 
-
+stateForm :: Formula -> Bool
+stateForm T = True
+stateForm F = True
+stateForm (Prop _) = True
+stateForm (Not f) = stateForm f
+stateForm (And f g) = stateForm f && stateForm g
+stateForm (Or f g) = stateForm f && stateForm g
+stateForm (If f g) = stateForm f && stateForm g
+stateForm (Iff f g) = stateForm f && stateForm g
+stateForm _ = False
 
 elementary :: Formula -> Bool
 elementary (Not f) = elementary f

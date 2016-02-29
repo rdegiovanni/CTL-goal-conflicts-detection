@@ -33,22 +33,22 @@ run_tableaux = \path -> do {
 	putStrLn ("Specification Successfully Parsed (" ++ (show (S.size spec)) ++ " formulas).");
 	putStr ("Tableaux .. ");
 	t <- return $ do_tableaux $ make_tableaux spec;
-	putStrLn ("done.");
 	print_Tableaux_info t;
-	writeFile "output/tableaux_raw.dot" (tab2dot t);
+	putStrLn ("done.");
+	writeFile "output/tableaux_raw.dot" (tag2dot t);
 	putStr ("Refining tableaux .. ");
 	t2 <- return $ refine_tableaux t;
+	print_Tableaux_info t2;
 	putStrLn ("done.");
 	if not $ S.null $ nodes t2 then 
 		do {
-			print_Tableaux_info t2;
-			writeFile "output/tableaux.dot" (tab2dot t2);
-			putStrLn ("Extracting model.");
-			model <- return $ Model.model2dot $ Model.flatten $ model t2;
-			writeFile "output/model.dot" (model);
+			writeFile "output/tableaux.dot" (tag2dot t2);
+			--putStrLn ("Extracting model.");
+			--model <- return $ Model.model2dot $ Model.flatten $ model t2;
+			--writeFile "output/model.dot" (model);
 
 			--putStrLn ("SAT");
-			run_conflicts_detection dom goals t t2;
+			run_conflicts_detection dom goals t t2 ;
 			--return ()
 		}
 	else
@@ -60,21 +60,30 @@ run_tableaux = \path -> do {
 
 run_conflicts_detection = \dom -> \goals -> \t -> \t2 -> do {
 	spec <- return $ S.union dom goals;
+
+	--putStr ("Refining tableaux for reach .. ");
+	--t3 <- return $ refine_tableaux_for_reach t;
+	--print_Tableaux_info t3;
+	--writeFile "output/tableaux_for_reach.dot" (tag2dot t3);
+	--putStrLn ("done.");
+
 	potential_conflict_set <- potential_conflicts spec t t2;
 	if S.null potential_conflict_set then 
 			putStrLn ("No WEAK conflict detected.");
 	else
 		do {
-			putStrLn ("Potential conflicts detected:");
-			putStrLn (show potential_conflict_set);
+			--putStrLn ("Potential conflicts detected:");
+			--putStrLn (show potential_conflict_set);
 			putStrLn ("Filtering WEAK conflicts...");
-			weak_conflicts_set <- return $ weak_conflicts dom goals potential_conflict_set;
-			putStrLn (show weak_conflicts_set)
+			weak_conflicts_set <- return $ weak_conflicts dom goals potential_conflict_set True;
+			--putStrLn (show weak_conflicts_set)
+			print_Conflicts_info weak_conflicts_set
 		}
 }
 
 print_Tableaux_info = \t -> do {
 	size <- return $ S.size (nodes t);
-	putStrLn ("#nodes= " ++ show (size) ++ "\t");
-	putStrLn ("#trans= " ++ show (R.size (rel t)) )
+	putStr ("(#nodes= " ++ show (size) ++ ", ");
+	putStr ("#trans= " ++ show (R.size (rel t)) ++ ") ")
 }
+
