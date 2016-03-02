@@ -1,0 +1,17 @@
+Goals:
+--G1 =
+AG (calling  -> (A calling U (connected || disconnected))) ;
+
+--G2=
+AG (calling  -> (A calling U (forwarded || disconnected)))
+
+--the desired BC
+--EF (calling && EG(!disconnected))
+
+Domain:
+--D1 = 
+AG (!connected || !forwarded) ;
+
+AG (!connected || !calling) ;
+
+AG (!forwarded || !calling) 

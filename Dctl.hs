@@ -97,10 +97,12 @@ isG (E(G _)) = True
 isG _ = False
 
 isGF :: Formula -> Bool
-isGF f = if (isG f) then
-			let f_subs = break_rule (chopG f) in
-				L.or $ L.map (L.any isF) f_subs
-		 else False
+isGF (A(G f))  = isF f
+isGF _ = False
+
+isResponse :: Formula -> Bool
+isResponse (A(G (If f g))) = stateForm f && isF g
+isResponse _ = False
 
 isFG :: Formula -> Bool
 isFG f = if (isF f) then
