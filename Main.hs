@@ -48,7 +48,7 @@ run_tableaux = \path -> do {
 			--writeFile "output/model.dot" (model);
 
 			--putStrLn ("SAT");
-			run_conflicts_detection dom goals t t2 ;
+			run_conflicts_detection path dom goals t t2 ;
 			--return ()
 		}
 	else
@@ -58,7 +58,7 @@ run_tableaux = \path -> do {
 	return t
 }
 
-run_conflicts_detection = \dom -> \goals -> \t -> \t2 -> do {
+run_conflicts_detection = \path -> \dom -> \goals -> \t -> \t2 -> do {
 	spec <- return $ S.union dom goals;
 
 	--putStr ("Refining tableaux for reach .. ");
@@ -68,6 +68,7 @@ run_conflicts_detection = \dom -> \goals -> \t -> \t2 -> do {
 	--putStrLn ("done.");
 
 	potential_conflict_set <- potential_conflicts spec t t2;
+
 	if S.null potential_conflict_set then 
 			putStrLn ("No WEAK conflict detected.");
 	else
@@ -77,9 +78,18 @@ run_conflicts_detection = \dom -> \goals -> \t -> \t2 -> do {
 			putStrLn ("Filtering WEAK conflicts...");
 			weak_conflicts_set <- return $ weak_conflicts dom goals potential_conflict_set True;
 			--putStrLn (show weak_conflicts_set)
-			print_Conflicts_info weak_conflicts_set
+			print_Conflicts_info "ALL" weak_conflicts_set;
+			writeFile (path++"-obtained") (setToString (S.toList weak_conflicts_set))
 		}
 }
+
+setToString :: [Formula] -> String
+setToString [] = ""
+setToString (x:xs) = if (xs == []) then
+						(show x) ++ "\n"
+					else
+						(show x) ++ ";\n" ++ (setToString xs)
+
 
 print_Tableaux_info = \t -> do {
 	size <- return $ S.size (nodes t);

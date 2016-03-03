@@ -70,26 +70,22 @@ potential_conflicts = \spec -> \t -> \t2 -> do {
 		reach <- return $ S.filter Dctl.isF spec;
 		putStrLn ("Computing REACH conflicts ...");
 		reach_conflicts <- return $ compute_reach_conflicts t reach;
-		putStrLn (show reach_conflicts);
-
-		progress <- return $ S.empty ;--S.filter isGF spec;
-		--putStrLn ("Computing PROGRESS conflicts ...");
-		progress_conflicts <- return $ S.empty ; --compute_progress_conflicts t progress;
-		--putStrLn (show progress_conflicts);
+		print_Conflicts_info "REACH" reach_conflicts;
 
 		response <- return $ S.filter (\f -> isGF f || isResponse f) spec;
 		putStrLn ("Computing RESPONSE conflicts ...");
 		response_conflicts <- return $ compute_response_conflicts t response;
-		putStrLn (show response_conflicts);
+		print_Conflicts_info "PROGRESS" response_conflicts;
 
-		if spec == S.union reach (S.union progress response) then
-				return (S.union reach_conflicts (S.union progress_conflicts response_conflicts))
+		if spec == S.union reach response then
+				return (S.union reach_conflicts response_conflicts)
 		else
 			do{
 				putStrLn ("Computing SAFETY conflicts ...");
 				safety_conflicts <- return $ compute_safety_conflicts t t2;
-				putStrLn (show safety_conflicts);
-				return (S.union (S.union reach_conflicts (S.union progress_conflicts response_conflicts)) safety_conflicts)
+				print_Conflicts_info "SAFE" safety_conflicts;
+
+				return (S.union (S.union reach_conflicts response_conflicts) safety_conflicts)
 		}
 }
 
@@ -106,38 +102,20 @@ compute_reach_conflicts t reach = 	let t' = refine_tableaux_for_reach t ;
 									  	tmap = \g -> tagmap t' g ;
 										frontier_inf = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) == pinf) (nodes t') ;
 										frontier = \g -> S.filter (\n -> S.member g (formulas n)) (frontier_inf g) ;
-										reach_conflict = \g -> (trace ("#frontier-reach: " ++ show (S.size (frontier g)))) compute_conditions t' (frontier g) (S.singleton (root t')) [] (root t') ;
-										reach_forms = \g -> S.map (make_reach_conflicts (chopF g)) (reach_conflict g) 
+										live_frontier = \g -> S.filter (\n -> isAnd n && (fromJust (M.lookup n (tmap g))) == 0) (nodes t') ;
+										reach_conflict = \g -> (trace (show g ++ " #frontier-prog: " ++ show (S.size (frontier g)) ++ " #live-frontier:" ++ show (S.size (live_frontier g)))) 
+																	 compute_liveness_conditions t' (frontier g) (live_frontier g) S.empty [] (root t') ;
+										reach_forms = \g -> make_reach_conflicts (make_or $ S.toList $(reach_conflict g)) 
 									in
-										S.unions $ S.toList $ S.map (\g -> reach_forms g) reach
+										S.map reach_forms reach
 
 refine_tableaux_for_reach :: Tableaux -> Tableaux
 refine_tableaux_for_reach t = let t' = (delete_or . delete_unreachable . delete_inconsistent) t in
 								if t' == t then (trace ("#tableaux_for_reach: " ++ show (S.size (nodes t)))) t else refine_tableaux_for_reach t'
 
 
-
-compute_progress_conflicts :: Tableaux -> Set Formula -> Set Formula
-compute_progress_conflicts t pr =	let --f_subs = \f -> S.unions $ S.toList $ Dctl.break (chopG f) ;
-										--evs = \f -> S.filter isF (f_subs f) ; 
-										evs = \f -> chopG f ;
-										progress = S.map evs pr ; 
-										t' = refine_tableaux_for_reach t ;
-										tmap = \g -> tagmap t' g ;
-										frontier_inf = \g -> S.filter (\n -> (fromJust (M.lookup n (tmap g))) == pinf) (nodes t') ;
-										frontier = \g -> S.filter (\n -> S.member g (formulas n)) (frontier_inf g) ;
-										live_frontier = \g -> S.filter (\n -> isAnd n && (fromJust (M.lookup n (tmap g))) == 0) (nodes t') ;
-										progress_conflict =  \g -> (trace ("#frontier-prog: " ++ show (S.size (frontier g)) ++ " #live-frontier:" ++ show (S.size (live_frontier g)))) 
-																	compute_liveness_conditions t' (frontier g) (live_frontier g) (S.singleton (root t')) [] (root t') ;
-										progress_forms = \g -> S.map (\f -> make_progress_conflicts (chopF g) f) (progress_conflict g) 
-									in
-										(trace ("progress evs: " ++ show progress))
-										S.unions $ S.toList $ S.map (\g -> progress_forms g) progress
-
 compute_response_conflicts :: Tableaux -> Set Formula -> Set Formula
-compute_response_conflicts t pr =	let --f_subs = \f -> S.unions $ S.toList $ Dctl.break (chopG f) ;
-										--evs = \f -> S.filter isF (f_subs f) ;
-										evs = \f -> chopProgress f
+compute_response_conflicts t pr =	let evs = \f -> chopProgress f ;
 										response = S.map evs pr ; 
 										t' = refine_tableaux_for_reach t ;
 										tmap = \g -> tagmap t' g ;
@@ -145,7 +123,7 @@ compute_response_conflicts t pr =	let --f_subs = \f -> S.unions $ S.toList $ Dct
 										frontier = \g -> S.filter (\n -> S.member g (formulas n)) (frontier_inf g) ;
 										live_frontier = \g -> S.filter (\n -> isAnd n && (fromJust (M.lookup n (tmap g))) == 0) (nodes t') ;
 										response_conflict =  \g -> (trace (show g ++ " #frontier-prog: " ++ show (S.size (frontier g)) ++ " #live-frontier:" ++ show (S.size (live_frontier g)))) 
-																	compute_liveness_conditions t' (frontier g) (live_frontier g) S.empty [] (root t') ;--(S.singleton (root t')) [] (root t') ;
+																	compute_liveness_conditions t' (frontier g) (live_frontier g) S.empty [] (root t') ;
 										response_forms = \(If p q) -> make_response_conflicts p q (make_or $ S.toList $ (response_conflict q)) 
 									in
 										(trace ("response evs: " ++ show response))
@@ -167,10 +145,8 @@ chopProgress g = let f = chopG g in
 -- current: current OR-node from which we are going to expand
 compute_conditions :: Tableaux -> Set Node -> Set Node -> [Formula] -> Node -> Set Formula
 compute_conditions t frontier vs lp c = let and_succs = succesors t c ;
-										--OR-nodes successors from and_succs
-											or_succs = S.unions $ S.toList (S.map (succesors t) and_succs) ;
 										--vs' increment visited nodes 
-											vs' = S.union vs (S.union and_succs or_succs) ;
+											vs' = S.union vs (S.union and_succs (S.singleton c)) ;
 										--compute potential conflicts: path conditions to reach inconsistent nodes.
 										--let incons_paths = S.map (branch_condition t c) and_succs in
 										--let incons_form = Dctl.negate $ make_or (S.toList incons_paths) in
@@ -182,6 +158,8 @@ compute_conditions t frontier vs lp c = let and_succs = succesors t c ;
 											if (vs'== (nodes t)) then
 												local_conflict
 											else
+												--OR-nodes successors from and_succs
+												--or_succs = S.unions $ S.toList (S.map (succesors t) and_succs) ;
 												--compute successors OR nodes, different from already visited nodes.
 												let cons_OR_succs = (S.unions (S.toList (S.map (succesors t) cons_and_succs) )) S.\\ vs ;
 												--filter consistent AND nodes that has at least one successor different from OR-node c.
@@ -227,8 +205,9 @@ branch_condition t n' = make_and $ S.toList $ S.filter isLiteral (formulas n')
 make_safety_conflicts :: Formula -> Formula
 make_safety_conflicts f = E (U T f)
 
-make_reach_conflicts :: Formula -> Formula -> Formula
-make_reach_conflicts f g = E (W (Not f) (And g (A (G (Not f))))) 
+make_reach_conflicts :: Formula -> Formula
+make_reach_conflicts f = (A (G f))
+						--E (W (Not f) (And g (A (G (Not f))))) 
 						--E (W (Not f) (And g (A (X (A (G (Not f)))))))
 						--A (W (Not f) g)
 make_progress_conflicts :: Formula -> Formula -> Formula
@@ -255,8 +234,8 @@ conflictsToString :: [Formula] -> [String]
 conflictsToString [] = []
 conflictsToString (x:xs) = (show x):(conflictsToString xs)
 
-print_Conflicts_info = \bcs -> do {
-	putStrLn ("#conflicts= " ++ show (S.size bcs) );
+print_Conflicts_info = \str -> \bcs -> do {
+	putStrLn ("#"++show str ++"-conflicts= " ++ show (S.size bcs) );
 	bcs_str <- return $ conflictsToString (S.toList bcs);
 	mapM_ putStrLn bcs_str
 }
@@ -276,12 +255,13 @@ compute_liveness_conditions t frontier live_frontier vs lp c = let and_succs = s
 											local_conflict = condition_to_frontier t lp live_frontier
 										in
 											--no more nodes to be expanded
-											if (trace ("vs' = " ++ show (S.size vs')))(vs'== (nodes t)) then
+											--(trace ("vs' = " ++ show (S.size vs')))
+											if (vs'== (nodes t)) then
 												local_conflict
 											else
 												let
 												--OR-nodes successors from and_succs
-												or_succs = S.unions $ S.toList (S.map (succesors t) and_succs) ; 
+												--or_succs = S.unions $ S.toList (S.map (succesors t) and_succs) ; 
 												--all nodes that don't fulfil the eventuality (i.e., the nodes not contained in live_frontier)
 												live_cons_and_succs = cons_and_succs S.\\ live_frontier ; 
 												--compute successors OR nodes, different from already visited nodes.

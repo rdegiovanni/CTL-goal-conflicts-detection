@@ -54,12 +54,12 @@ instance Show Formula where
 	show (E f) 		= 	"E" ++ show f
 	show (Prop s) 	= 	s	
 	show Norm		= 	"n"
-	show T 			= 	"true"
-	show F 			= 	"false"
+	show T 			= 	"True"
+	show F 			= 	"False"
 
 instance Show PFormula where
-	show (U p q) 	=	"(" ++ show p ++ " U " ++ show q ++ ")"
-	show (W p q) 	=	"(" ++ show p ++ " W " ++ show q ++ ")"
+	show (U p q) 	=	"(" ++ show p ++ ") U (" ++ show q ++ ")"
+	show (W p q) 	=	"(" ++ show p ++ ") W (" ++ show q ++ ")"
 	show (X p) 		=	"X" ++ "(" ++  show p ++ ")"
 	show (G p) 		=	"G (" ++ show p ++ ")"
 	show (FF p) 	= 	"F (" ++ show p ++ ")"
