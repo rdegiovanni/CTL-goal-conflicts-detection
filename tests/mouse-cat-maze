@@ -1,0 +1,27 @@
+--This is a traffic control problem of a mouse in a maze. The maze, shown in Figure 4, consists of five rooms connected by various one-way passages, where some of them can be closed through control. There is also a cat which alway stays in room 1. The mouse is initially in room 0, but it can visit other rooms by using one-way passages. Our task is to design a supervisor to control the passages in order to guarantee that
+
+Goals:
+--Spec 1 The mouse never visits room 1 where the cat stays (this is a safety property).
+AG(!m1);
+
+--Spec 2 The mouse can go to room 0 for play at any time it wants to (this is a nonblocking property).
+AG(AF(m0));
+
+--Spec 3 The mouse shall visit room 2 for food infinitely often (this is a liveness property).
+AG(AF(m2));
+
+--Spec 4 The mouse shall never be locked in a room (this is a nonterminating property).
+AG(AF(m0 || m1 || m2 ||m3 || m4))
+Domain:
+--initially the mouse is in room 0
+m0;
+--model the possible movements of the mouse
+AG(m0 -> AX(m2));
+AG(m0 -> EX(m3));
+AG(m1 -> AX(m0));
+AG(m2 -> EX(m0));
+AG(m2 -> EX(m1));
+AG(m2 -> EX(m3));
+AG(m3 -> AX(m2));
+AG(m3 -> AX(m4));
+AG(m4 -> AX(m3))

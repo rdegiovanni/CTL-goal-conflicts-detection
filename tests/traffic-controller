@@ -1,0 +1,29 @@
+--Consider a traffic controller on a north- south highway with a road off to the east
+--Each road has a sensor that goes to true when a car crosses it
+--For simplicity, no north or south bound car will turn
+
+--N (north), S (south), E (east)
+--N-go (cars from the north can go)
+--S-go (cars from the south can go) 
+--E-go (cars from the east can go)
+
+Goals:
+--If cars from the east have a go-signal, then no other car can have a go-signal
+AG (!(ego && (ngo || sgo)));
+
+--If a sensor registers a car, then the car will be able to go through the intersection
+AG (!ngo && n -> AF(ngo));
+AG (!sgo && s -> AF(sgo)); 
+AG (!ego && e -> AF(ego));
+--If the above are true, then the controller is free of deadlock
+
+--Efficiency
+--Since north and south bound cars can safely pass by each other we can state a possibility
+EF(ngo && sgo)
+
+Domain:
+--Fairness
+--We can't have a car stop in the intersection
+AG (!(ngo && n));
+AG (!(sgo && s));
+AG (!(ego && e))
