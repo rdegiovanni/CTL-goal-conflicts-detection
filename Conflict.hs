@@ -206,7 +206,7 @@ make_safety_conflicts :: Formula -> Formula
 make_safety_conflicts f = E (U T f)
 
 make_reach_conflicts :: Formula -> Formula
-make_reach_conflicts f = (A (G f))
+make_reach_conflicts f = (E (G f))
 						--E (W (Not f) (And g (A (G (Not f))))) 
 						--E (W (Not f) (And g (A (X (A (G (Not f)))))))
 						--A (W (Not f) g)
@@ -252,7 +252,7 @@ compute_liveness_conditions t frontier live_frontier vs lp c = let and_succs = s
 										--let incons_form = Dctl.negate $ make_or (S.toList incons_paths) in
 										--let local_conflict = S.singleton $ buildPathFormula (lp ++ [incons_form]) in
 											cons_and_succs = and_succs S.\\ frontier ;
-											local_conflict = condition_to_frontier t lp live_frontier
+											local_conflict = condition_to_frontier t lp (S.intersection cons_and_succs live_frontier)
 										in
 											--no more nodes to be expanded
 											--(trace ("vs' = " ++ show (S.size vs')))

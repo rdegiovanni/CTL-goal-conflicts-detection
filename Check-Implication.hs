@@ -34,7 +34,7 @@ run_tableaux = \path1 -> \path2 -> do {
 	obtained <- return $ parseSpecification (remove_comments str2);	
 	putStrLn ("Formulas parsed: " ++ (show (S.size expected)) ++ " - " ++ (show(S.size obtained)) );
 	putStrLn ("Tableaux .. ");
-	neg_or_obtained <- return $ Dctl.negate $ make_or (S.toList obtained) ;
+	neg_or_obtained <- return $ A(G( make_and (S.toList$ S.map Dctl.negate obtained))) ;
 	spec <- return $ S.union expected (S.singleton neg_or_obtained) ;
 	t <- return $ do_tableaux $ make_tableaux spec;
 	print_Tableaux_info t;
