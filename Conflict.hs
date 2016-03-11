@@ -31,11 +31,12 @@ import Debug.Trace
 -- returns the seat of portential conflicts that meet with the definition of weak conflicts.
 weak_conflicts :: Set Formula -> Set Formula -> Set Formula -> Bool -> Set Formula
 weak_conflicts dom goals pot_conflicts cm = let spec = S.union dom goals ;
-										 		incons_conflicts = S.filter (logical_inconsistency spec) pot_conflicts ;
+												--by construction all pBCs are logical inconsistent
+										 		incons_conflicts = pot_conflicts ;--S.filter (logical_inconsistency spec) pot_conflicts ;
 												min_conflicts 	 = S.filter (if cm then (minimality dom goals) else (domain_consistency dom)) incons_conflicts ;
-										 		no_trivials 	 = S.filter (no_trivial_BCs goals) min_conflicts
+										 		--no_trivials 	 = S.filter (no_trivial_BCs goals) min_conflicts
 										 	in	
-												no_trivials
+												min_conflicts --no_trivials
 
 -- check logical inconsistency 
 logical_inconsistency :: Set Formula -> Formula -> Bool
@@ -52,7 +53,7 @@ minimality dom goals ic = 	let spec = S.union dom goals;
 
 -- check logical inconsistency 
 domain_consistency :: Set Formula -> Formula -> Bool
-domain_consistency dom bc = isSAT (dom S.<+ bc)
+domain_consistency dom bc = (trace ".") isSAT (dom S.<+ bc)
 
 no_trivial_BCs :: Set Formula -> Formula -> Bool
 no_trivial_BCs goals bc = 	let neg_goals = Dctl.negate (make_and (S.toList goals)) ;
