@@ -1,7 +1,9 @@
 --Between the time an elevator is called at a floor and the time it opens its doors at that floor, the elevator can arrive at that floor at most twice
 Goals:
-AG(call -> AF(open));
+AG(call -> AF(open)) ;
 
-AG(call -> A (!open) U atfloor);
+AG (call && atfloor -> AX(A (!atfloor) W open));
 
-AG((atfloor && !open) -> AX(A (!atfloor) U (atfloor && open)))
+AG (AX(open) -> atfloor)
+
+
