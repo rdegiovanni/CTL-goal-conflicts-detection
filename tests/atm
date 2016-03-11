@@ -1,0 +1,5 @@
+Goals:
+
+AG(passok && !locked -> money) ;
+AG(!passok -> A(!money) U !locked) ;
+AG(AF(money))

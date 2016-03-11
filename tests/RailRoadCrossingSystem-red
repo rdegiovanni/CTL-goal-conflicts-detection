@@ -1,0 +1,15 @@
+--When the train is approaching (ta), then the gate should be closed (tc) so the train can cross (tc). 
+--When a car approaches to the crossing (ca), then the gate opens (go) and car crosses (cc). 
+--Of course, the train and the car cannot be crossing at the same time.
+Goals:
+--No collision
+AG (tc -> !cc) ;
+AG (ta -> !go) 
+--AG (ca -> go);
+--AG(AF(go))
+--AG(ca -> AF (go))
+Domain:
+--!ta && !tc && !ca && !cc && go;
+--AG (go <-> !gc);
+AG(AX(tc) -> ta);
+AG(AX(cc) -> ca)
