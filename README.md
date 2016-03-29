@@ -3,6 +3,8 @@
 The tool computes a set of conflicts for goals specified in CTL.
 
 ##Dependencies
+[Hashable-lib]: On linux, install libghc-hashable-dev. On mac, run cabal install hashable.
+
 [hBDD](https://github.com/sebcrozet/HBDD) : a ROBDD library for haskell.
 
 1. Clone the [HDBB](https://github.com/sebcrozet/HBDD) library.
